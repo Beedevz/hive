@@ -1,0 +1,163 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Hive — Example Configuration
+# Copy this file to config.yaml and customise it.
+# This file is auto-copied on first boot if no config.yaml / config.json exists.
+# ─────────────────────────────────────────────────────────────────────────────
+
+settings:
+  title: "Hive"
+  theme: dark          # dark | light
+  language: en
+  show_greeting: true
+  greeting: "Good morning"
+  columns: 2           # Service grid columns (1–4)
+
+widgets:
+  - type: clock
+    enabled: true
+
+  - type: search
+    enabled: true
+    config:
+      engine: google   # google | duckduckgo | bing | startpage | custom
+      # url: https://searxng.example.com/search?q=  # only for engine: custom
+
+  - type: resources
+    enabled: false
+
+  - type: weather
+    enabled: false
+    config:
+      lat: 41.01
+      lon: 28.98
+      location_name: Istanbul
+
+services:
+  - category: Infrastructure
+    icon: "🖥️"
+    items:
+      - name: Portainer
+        url: http://portainer.local:9000
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/portainer.svg
+        description: Container management
+        tag: CE
+        adapter: portainer
+        adapter_config:
+          token: "${PORTAINER_TOKEN}"
+
+      - name: Proxmox
+        url: https://proxmox.local:8006
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/proxmox.svg
+        description: Hypervisor
+        tag: v8.x
+        adapter: proxmox
+        adapter_config:
+          token: "${PROXMOX_TOKEN}"   # Format: USER@REALM!TOKENID=SECRET
+
+  - category: Networking
+    icon: "🌐"
+    items:
+      - name: AdGuard Home
+        url: http://adguard.local:3000
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/adguard-home.svg
+        description: DNS & ad blocking
+        adapter: adguard
+        adapter_config:
+          username: "${ADGUARD_USER}"
+          password: "${ADGUARD_PASS}"
+
+      - name: Pi-hole
+        url: http://pihole.local
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/pi-hole.svg
+        description: DNS sinkhole
+        adapter: pihole
+        adapter_config:
+          token: "${PIHOLE_TOKEN}"    # v5: API token  |  v6: admin password (leave empty if no password)
+
+      - name: Nginx Proxy Manager
+        url: http://npm.local:81
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/nginx-proxy-manager.svg
+        description: Reverse proxy & SSL
+        adapter: npm
+        adapter_config:
+          username: "${NPM_USER}"
+          password: "${NPM_PASS}"
+
+  - category: Monitoring
+    icon: "📊"
+    items:
+      - name: Grafana
+        url: http://grafana.local:3000
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/grafana.svg
+        description: Metrics & dashboards
+        tag: v10.x
+        adapter: grafana
+        adapter_config:
+          token: "${GRAFANA_TOKEN}"
+
+      - name: Uptime Kuma
+        url: http://uptime-kuma.local:3001
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/uptime-kuma.svg
+        description: Uptime monitoring
+        adapter: uptime-kuma
+        adapter_config:
+          username: "${UPTIMEKUMA_USER}"
+          password: "${UPTIMEKUMA_PASS}"
+
+  - category: Media
+    icon: "🎬"
+    items:
+      - name: Jellyfin
+        url: http://jellyfin.local:8096
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyfin.svg
+        description: Media server
+        adapter: jellyfin
+        adapter_config:
+          token: "${JELLYFIN_TOKEN}"
+
+      - name: Sonarr
+        url: http://sonarr.local:8989
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/sonarr.svg
+        description: TV show management
+        adapter: sonarr
+        adapter_config:
+          apikey: "${SONARR_APIKEY}"
+
+      - name: Radarr
+        url: http://radarr.local:7878
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/radarr.svg
+        description: Movie management
+        adapter: radarr
+        adapter_config:
+          apikey: "${RADARR_APIKEY}"
+
+      - name: qBittorrent
+        url: http://qbittorrent.local:8080
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/qbittorrent.svg
+        description: Torrent client
+        adapter: qbittorrent
+        adapter_config:
+          username: "${QB_USER}"
+          password: "${QB_PASS}"
+
+bookmarks:
+  - category: Development
+    icon: "🛠️"
+    items:
+      - name: GitHub
+        url: https://github.com
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/github.svg
+        description: Source code hosting
+
+      - name: Docker Hub
+        url: https://hub.docker.com
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/docker.svg
+        description: Container registry
+
+  - category: Documentation
+    icon: "📚"
+    items:
+      - name: Self-Hosted
+        url: https://awesome-selfhosted.net
+        icon: "🏠"
+        description: Awesome self-hosted apps list

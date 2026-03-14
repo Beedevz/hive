@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Live config — user-managed, may contain secrets
+config/config.yaml
+config/config.json
+config/backups/
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# MCP config (contains API keys)
+.mcp.json
+.cursor/
+.taskmaster/
+.claude/
+
+# OS specific
+.DS_Store
