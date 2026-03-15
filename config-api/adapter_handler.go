@@ -42,6 +42,30 @@ func unmarshalConfig(format string, data []byte, dest interface{}) error {
 	return json.Unmarshal(data, dest)
 }
 
+// findServiceByName loads config and returns the first service whose name
+// matches case-insensitively. Used by /probe/{name}/* endpoints.
+func findServiceByName(name string) (*serviceItem, error) {
+	format := detectFormat()
+	data, err := readFile(configPath(format))
+	if err != nil {
+		return nil, err
+	}
+	var cfg hiveConfig
+	if err := unmarshalConfig(format, data, &cfg); err != nil {
+		return nil, err
+	}
+	nameLower := strings.ToLower(name)
+	for _, cat := range cfg.Services {
+		for i, svc := range cat.Items {
+			if strings.ToLower(svc.Name) == nameLower {
+				cp := cat.Items[i]
+				return &cp, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 // findService loads config and returns the service matching name+adapterType.
 // Prefers the entry whose adapter field matches adapterType to resolve duplicate names.
 func findService(name, adapterType string) (*serviceItem, error) {

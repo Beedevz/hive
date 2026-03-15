@@ -3,27 +3,27 @@ import { useState, useEffect, useRef } from 'react'
 const POLL_INTERVAL = 60_000 // 60 seconds
 
 /**
- * Fetches adapter stats for a service.
- * @param {string} adapter - adapter type (e.g. "gitlab")
- * @param {string} serviceName - service name as in config (e.g. "GitLab")
+ * Fetches adapter stats for a service via /api/probe/{name}/details.
+ * The backend resolves the adapter type from config — no need to pass it here.
+ * @param {string|null} serviceName - service name as in config (e.g. "GitLab")
+ * @param {boolean} hasAdapter - only fetch if the service has an adapter configured
  * @returns {{ stats: Array, loading: boolean, error: string|null }}
  */
-export function useAdapterStats(adapter, serviceName) {
+export function useAdapterStats(serviceName, hasAdapter) {
   const [stats, setStats] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const timerRef = useRef(null)
 
   useEffect(() => {
-    if (!adapter || !serviceName) {
+    if (!serviceName || !hasAdapter) {
       setLoading(false)
       return
     }
 
     const fetchStats = async () => {
       try {
-        const params = new URLSearchParams({ service: serviceName })
-        const res = await fetch(`/api/adapters/${encodeURIComponent(adapter)}?${params}`)
+        const res = await fetch(`/api/probe/${encodeURIComponent(serviceName)}/details`)
         const data = await res.json()
         if (data.ok) {
           setStats(data.stats || [])
@@ -42,7 +42,7 @@ export function useAdapterStats(adapter, serviceName) {
     fetchStats()
     timerRef.current = setInterval(fetchStats, POLL_INTERVAL)
     return () => clearInterval(timerRef.current)
-  }, [adapter, serviceName])
+  }, [serviceName, hasAdapter])
 
   return { stats, loading, error }
 }
