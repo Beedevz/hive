@@ -8,17 +8,18 @@ import (
 	"io"
 	"log"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/beedevz/hive-api/adapters"
 	"gopkg.in/yaml.v3"
 )
 
@@ -214,58 +215,21 @@ func isTimeoutError(err error) bool {
 	return false
 }
 
-// allowedProbeURL returns false for URLs that must not be probed.
-// Private-range IPs are permitted (homelab services live there), but
-// well-known cloud-metadata endpoints are blocked to limit SSRF blast radius.
-func allowedProbeURL(u *url.URL) bool {
-	host := u.Hostname()
-	ip := net.ParseIP(host)
-	if ip != nil {
-		for _, blocked := range []string{
-			"169.254.169.254", // AWS / GCP / Azure IMDS (IPv4)
-			"fd00:ec2::254",   // AWS IMDS (IPv6)
-		} {
-			if ip.Equal(net.ParseIP(blocked)) {
-				return false
-			}
-		}
-	}
-	return true
+// validNameRe allows letters, digits, spaces, hyphens and underscores (1-64 chars).
+// These are the only characters permitted in a service name so that names are
+// safe to embed in URL path segments without ambiguity.
+var validNameRe = regexp.MustCompile(`^[a-zA-Z0-9 _-]{1,64}$`)
+
+func isValidServiceName(name string) bool {
+	return validNameRe.MatchString(name)
 }
 
-func probeService(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", 405)
-		return
-	}
-
-	rawURL := r.URL.Query().Get("url")
-	if rawURL == "" {
-		http.Error(w, "url parameter required", 400)
-		return
-	}
-
-	parsed, err := url.Parse(rawURL)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(probeResult{Status: "unknown", LatencyMs: 0})
-		return
-	}
-
-	if !allowedProbeURL(parsed) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(probeResult{Status: "unknown", LatencyMs: 0})
-		return
-	}
-
-	// Use the canonicalized URL (never pass raw user input directly to a
-	// network request — prevents encoded-character and path-traversal tricks).
-	probeURL := parsed.String()
-
-	// InsecureSkipVerify defaults to true for homelab use (self-signed certs
-	// are common). Set PROBE_INSECURE_TLS=false to enforce certificate checks.
+// probeClient builds the shared HTTP client used by status checks.
+// InsecureSkipVerify defaults to true for homelab use (self-signed certs are
+// common). Set PROBE_INSECURE_TLS=false to enforce certificate verification.
+func probeClient() *http.Client {
 	insecureTLS := os.Getenv("PROBE_INSECURE_TLS") != "false"
-	client := &http.Client{
+	return &http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureTLS}, //nolint:gosec
@@ -277,13 +241,99 @@ func probeService(w http.ResponseWriter, r *http.Request) {
 			return nil
 		},
 	}
+}
 
+// handleProbe routes /probe/{name}/status and /probe/{name}/details.
+// The service URL is always read from config — it never comes from the caller.
+func handleProbe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	// Path after "/probe/": "{name}/status" or "{name}/details"
+	rest := strings.TrimPrefix(r.URL.Path, "/probe/")
+	slash := strings.LastIndex(rest, "/")
+	if slash == -1 {
+		http.Error(w, "invalid path — expected /probe/{name}/status or /probe/{name}/details", 400)
+		return
+	}
+
+	rawName := rest[:slash]
+	action := rest[slash+1:]
+
+	if action != "status" && action != "details" {
+		http.Error(w, "invalid action — expected 'status' or 'details'", 400)
+		return
+	}
+
+	name, err := url.PathUnescape(rawName)
+	if err != nil || !isValidServiceName(name) {
+		http.Error(w, "invalid service name — allowed: letters, digits, spaces, hyphens, underscores (max 64 chars)", 400)
+		return
+	}
+
+	svc, err := findServiceByName(name)
+	if err != nil {
+		http.Error(w, "config read error", 500)
+		return
+	}
+	if svc == nil {
+		http.Error(w, "service not found: "+name, 404)
+		return
+	}
+
+	switch action {
+	case "status":
+		handleProbeStatus(w, r, svc)
+	case "details":
+		handleProbeDetails(w, r, svc)
+	}
+}
+
+// handleProbeStatus performs a HEAD (fallback: GET) against the service URL
+// stored in config and returns an online/offline/unknown result.
+func handleProbeStatus(w http.ResponseWriter, r *http.Request, svc *serviceItem) {
+	unknown := func() {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(probeResult{Status: "unknown", LatencyMs: 0})
+	}
+
+	if svc.URL == "" {
+		unknown()
+		return
+	}
+
+	parsed, err := url.Parse(svc.URL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		unknown()
+		return
+	}
+
+	// URL is from trusted config, not user input — reconstruct from parsed
+	// fields to keep the pattern consistent and prevent any residual taint.
+	safeURL := &url.URL{
+		Scheme:   parsed.Scheme,
+		Host:     parsed.Host,
+		Path:     parsed.Path,
+		RawQuery: parsed.RawQuery,
+	}
+
+	client := probeClient()
 	start := time.Now()
-	resp, err := client.Head(probeURL)
+
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodHead, safeURL.String(), nil)
+	var resp *http.Response
+	if err == nil {
+		resp, err = client.Do(req)
+	}
 	if err != nil && !isTimeoutError(err) {
 		// Some servers (e.g. Proxmox) don't support HEAD; fall back to GET.
 		// Don't retry on timeout — that would double the wait time.
-		resp, err = client.Get(probeURL)
+		req, err = http.NewRequestWithContext(r.Context(), http.MethodGet, safeURL.String(), nil)
+		if err == nil {
+			resp, err = client.Do(req)
+		}
 	}
 	latency := time.Since(start).Milliseconds()
 
@@ -301,6 +351,37 @@ func probeService(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+// handleProbeDetails delegates to the service's configured adapter and returns
+// widget stats. Returns an error result if no adapter is configured.
+func handleProbeDetails(w http.ResponseWriter, r *http.Request, svc *serviceItem) {
+	if svc.Adapter == "" {
+		writeJSON(w, adapters.ErrResult("none", "no adapter configured for this service"))
+		return
+	}
+
+	cacheKey := svc.Adapter + ":" + svc.Name
+	if cached, ok := adapters.GetCached(cacheKey); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(cached)
+		return
+	}
+
+	cfg := adapters.ExpandEnvVars(svc.AdapterConfig)
+	baseURL := svc.URL
+	if u, ok := cfg["api_url"].(string); ok && u != "" {
+		baseURL = u
+	}
+	baseURL = strings.TrimRight(baseURL, "/")
+
+	result := adapters.Run(svc.Adapter, cfg, baseURL)
+	if result.Ok {
+		adapters.SetCached(cacheKey, result)
+	}
+
+	writeJSON(w, result)
 }
 
 type ramInfo struct {
@@ -479,7 +560,7 @@ func main() {
 		}
 		backupConfig(w, r)
 	}))
-	mux.HandleFunc("/probe", corsMiddleware(probeService))
+	mux.HandleFunc("/probe/", corsMiddleware(handleProbe))
 	mux.HandleFunc("/system", corsMiddleware(systemStats))
 	mux.HandleFunc("/adapters/", corsMiddleware(handleAdapter))
 	mux.HandleFunc("/config/raw", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {

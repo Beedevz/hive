@@ -1,33 +1,14 @@
-version: "3.9"
-
 services:
-  frontend:
+  hive:
     build:
       context: .
-      dockerfile: nginx/Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - config-api
-    restart: unless-stopped
-    networks:
-      - home-net
-
-  config-api:
-    build:
-      context: ./config-api
+      dockerfile: Dockerfile
       args:
         VERSION: ${VERSION:-dev}
+    ports:
+      - "3000:80"
     volumes:
       - ./config:/config
     env_file:
       - .env
-    environment:
-      - PORT=3001
     restart: unless-stopped
-    networks:
-      - home-net
-
-networks:
-  home-net:
-    driver: bridge

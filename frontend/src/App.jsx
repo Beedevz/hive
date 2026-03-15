@@ -228,13 +228,13 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
   const [hov, setHov] = useState(false)
   const [status, setStatus] = useState('unknown')
   const [latency, setLatency] = useState(null)
-  const { stats, error: adapterError, loading: adapterLoading } = useAdapterStats(item.adapter, item.adapter ? item.name : null)
+  const { stats, error: adapterError, loading: adapterLoading } = useAdapterStats(item.name, !!item.adapter)
 
   useEffect(() => {
     const check = async () => {
-      if (!item.url) { setStatus('unknown'); return }
+      if (!item.name) { setStatus('unknown'); return }
       try {
-        const res = await fetch(`/api/probe?url=${encodeURIComponent(item.url)}`)
+        const res = await fetch(`/api/probe/${encodeURIComponent(item.name)}/status`)
         const data = await res.json()
         setStatus(data.status)
         setLatency(data.latency_ms)
@@ -245,7 +245,7 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
     check()
     const t = setInterval(check, 30000)
     return () => clearInterval(t)
-  }, [item.url])
+  }, [item.name])
 
   return (
     <div style={{ position: 'relative' }}
