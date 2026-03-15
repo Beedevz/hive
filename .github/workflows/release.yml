@@ -83,6 +83,15 @@ jobs:
           cache-to: type=gha,mode=max
 
       # ── Security scan ─────────────────────────────────────────────
+      - name: Trivy — show vulnerabilities (table)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.version.outputs.VERSION }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+
       - name: Trivy — container vulnerability scan
         uses: aquasecurity/trivy-action@master
         with:
