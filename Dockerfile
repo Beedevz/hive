@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${VERSION}" -o c
 
 # ── Stage 3: Final image (nginx + supervisord) ────────────────────
 FROM nginx:alpine
-RUN apk add --no-cache supervisor
+RUN apk upgrade --no-cache && apk add --no-cache supervisor
 
 # React build
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
