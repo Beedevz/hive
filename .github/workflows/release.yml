@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: write      # create GitHub Release
       security-events: write  # upload Trivy SARIF
+      pull-requests: read  # git-cliff GitHub metadata
 
     steps:
       - name: Checkout (full history for changelog)
