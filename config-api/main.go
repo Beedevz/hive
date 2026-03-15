@@ -383,7 +383,7 @@ func bootstrapConfig() {
 	if _, err := os.Stat(json); err == nil {
 		return
 	}
-	src := filepath.Join(configDir, "config.example.yaml")
+	src := "/etc/hive/config.example.yaml"
 	data, err := os.ReadFile(src)
 	if err != nil {
 		log.Printf("bootstrap: no config.example.yaml found, starting with empty config")

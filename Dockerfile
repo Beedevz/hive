@@ -31,8 +31,9 @@ COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 # Supervisord config
 COPY supervisord.conf /etc/supervisord.conf
 
-# Default config template (bootstrapped to /config/config.yaml on first boot)
-COPY config/config.example.yaml /config/config.example.yaml
+# Default config template — kept outside the /config volume so the mount
+# does not hide it; bootstrapConfig() copies it to /config/config.yaml on first boot.
+COPY config/config.example.yaml /etc/hive/config.example.yaml
 
 EXPOSE 80
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
