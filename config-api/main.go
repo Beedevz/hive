@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -213,6 +214,25 @@ func isTimeoutError(err error) bool {
 	return false
 }
 
+// allowedProbeURL returns false for URLs that must not be probed.
+// Private-range IPs are permitted (homelab services live there), but
+// well-known cloud-metadata endpoints are blocked to limit SSRF blast radius.
+func allowedProbeURL(u *url.URL) bool {
+	host := u.Hostname()
+	ip := net.ParseIP(host)
+	if ip != nil {
+		for _, blocked := range []string{
+			"169.254.169.254", // AWS / GCP / Azure IMDS (IPv4)
+			"fd00:ec2::254",   // AWS IMDS (IPv6)
+		} {
+			if ip.Equal(net.ParseIP(blocked)) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func probeService(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", 405)
@@ -232,10 +252,23 @@ func probeService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !allowedProbeURL(parsed) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(probeResult{Status: "unknown", LatencyMs: 0})
+		return
+	}
+
+	// Use the canonicalized URL (never pass raw user input directly to a
+	// network request — prevents encoded-character and path-traversal tricks).
+	probeURL := parsed.String()
+
+	// InsecureSkipVerify defaults to true for homelab use (self-signed certs
+	// are common). Set PROBE_INSECURE_TLS=false to enforce certificate checks.
+	insecureTLS := os.Getenv("PROBE_INSECURE_TLS") != "false"
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec — probe is health-check only, not data transfer
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureTLS}, //nolint:gosec
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
@@ -246,11 +279,11 @@ func probeService(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start := time.Now()
-	resp, err := client.Head(rawURL)
+	resp, err := client.Head(probeURL)
 	if err != nil && !isTimeoutError(err) {
 		// Some servers (e.g. Proxmox) don't support HEAD; fall back to GET.
 		// Don't retry on timeout — that would double the wait time.
-		resp, err = client.Get(rawURL)
+		resp, err = client.Get(probeURL)
 	}
 	latency := time.Since(start).Milliseconds()
 
