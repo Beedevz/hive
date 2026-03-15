@@ -9,25 +9,108 @@ import (
 	"time"
 )
 
-// ─── probeService tests ──────────────────────────────────────────────────────
+// ─── isValidServiceName tests ─────────────────────────────────────────────────
 
-func TestProbeService_Online200(t *testing.T) {
+func TestIsValidServiceName(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		valid bool
+	}{
+		{"simple", "Jellyfin", true},
+		{"with space", "Jellyfin Home", true},
+		{"with hyphen", "my-service", true},
+		{"with underscore", "my_service", true},
+		{"numbers", "Service123", true},
+		{"max length", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"[:64], true},
+		{"empty", "", false},
+		{"too long", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false}, // 65 chars
+		{"slash", "service/name", false},
+		{"dot", "service.name", false},
+		{"special chars", "svc@host", false},
+		{"semicolon", "svc;drop", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := isValidServiceName(c.input); got != c.valid {
+				t.Errorf("isValidServiceName(%q) = %v, want %v", c.input, got, c.valid)
+			}
+		})
+	}
+}
+
+// ─── handleProbe routing tests ────────────────────────────────────────────────
+
+func TestHandleProbe_MethodNotAllowed(t *testing.T) {
+	req := httptest.NewRequest("POST", "/probe/Jellyfin/status", nil)
+	rr := httptest.NewRecorder()
+	handleProbe(rr, req)
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", rr.Code)
+	}
+}
+
+func TestHandleProbe_InvalidAction(t *testing.T) {
+	req := httptest.NewRequest("GET", "/probe/Jellyfin/unknown", nil)
+	rr := httptest.NewRecorder()
+	handleProbe(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestHandleProbe_MissingAction(t *testing.T) {
+	req := httptest.NewRequest("GET", "/probe/Jellyfin", nil)
+	rr := httptest.NewRecorder()
+	handleProbe(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestHandleProbe_InvalidName(t *testing.T) {
+	req := httptest.NewRequest("GET", "/probe/bad%2Fname/status", nil)
+	rr := httptest.NewRecorder()
+	handleProbe(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid name, got %d", rr.Code)
+	}
+}
+
+func TestHandleProbe_ServiceNotFound(t *testing.T) {
+	// Returns 404 when config is readable but service doesn't exist,
+	// or 500 when the config file itself is not accessible (e.g. CI with no /config mount).
+	// Either way it must not return 200.
+	req := httptest.NewRequest("GET", "/probe/nonexistent-xyz-service/status", nil)
+	rr := httptest.NewRecorder()
+	handleProbe(rr, req)
+	if rr.Code == http.StatusOK {
+		t.Errorf("expected non-200 for unknown service, got 200")
+	}
+}
+
+// ─── handleProbeStatus tests ──────────────────────────────────────────────────
+// Call handleProbeStatus directly with a synthetic serviceItem so tests are
+// hermetic — no config file or network dependency beyond the in-process server.
+
+func probeStatusRequest(t *testing.T, svcURL string) (probeResult, int) {
+	t.Helper()
+	svc := &serviceItem{Name: "test-svc", URL: svcURL}
+	req := httptest.NewRequest("GET", "/probe/test-svc/status", nil)
+	rr := httptest.NewRecorder()
+	handleProbeStatus(rr, req, svc)
+	var result probeResult
+	json.NewDecoder(rr.Body).Decode(&result)
+	return result, rr.Code
+}
+
+func TestProbeStatus_Online200(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodHead {
-			t.Errorf("expected HEAD, got %s", r.Method)
-		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
-		t.Fatalf("decode error: %v", err)
-	}
+	result, _ := probeStatusRequest(t, upstream.URL)
 	if result.Status != "online" {
 		t.Errorf("expected online, got %s", result.Status)
 	}
@@ -36,146 +119,99 @@ func TestProbeService_Online200(t *testing.T) {
 	}
 }
 
-func TestProbeService_Online404(t *testing.T) {
+func TestProbeStatus_Online404(t *testing.T) {
 	// 404 is still "online" — service is reachable, just path not found
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+	result, _ := probeStatusRequest(t, upstream.URL)
 	if result.Status != "online" {
 		t.Errorf("404 should be online, got %s", result.Status)
 	}
 }
 
-func TestProbeService_Offline500(t *testing.T) {
+func TestProbeStatus_Offline500(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+	result, _ := probeStatusRequest(t, upstream.URL)
 	if result.Status != "offline" {
 		t.Errorf("500 should be offline, got %s", result.Status)
 	}
 }
 
-func TestProbeService_Offline503(t *testing.T) {
+func TestProbeStatus_Offline503(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+	result, _ := probeStatusRequest(t, upstream.URL)
 	if result.Status != "offline" {
 		t.Errorf("503 should be offline, got %s", result.Status)
 	}
 }
 
-func TestProbeService_Timeout(t *testing.T) {
-	// Upstream hangs longer than the 3s probe timeout
+func TestProbeStatus_Timeout(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(5 * time.Second)
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-
 	start := time.Now()
-	probeService(rr, req)
+	result, _ := probeStatusRequest(t, upstream.URL)
 	elapsed := time.Since(start)
 
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
 	if result.Status != "offline" {
 		t.Errorf("timeout should be offline, got %s", result.Status)
 	}
-	// Should finish well under 5s (the upstream delay)
 	if elapsed > 4*time.Second {
 		t.Errorf("probe took too long: %v", elapsed)
 	}
 }
 
-func TestProbeService_UnreachableHost(t *testing.T) {
-	// Port 1 is reserved and never listening
-	req := httptest.NewRequest("GET", "/probe?url=http://127.0.0.1:1", nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+func TestProbeStatus_UnreachableHost(t *testing.T) {
+	result, _ := probeStatusRequest(t, "http://127.0.0.1:1")
 	if result.Status != "offline" {
 		t.Errorf("unreachable host should be offline, got %s", result.Status)
 	}
 }
 
-func TestProbeService_MissingURL(t *testing.T) {
-	req := httptest.NewRequest("GET", "/probe", nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", rr.Code)
+func TestProbeStatus_EmptyURL(t *testing.T) {
+	result, _ := probeStatusRequest(t, "")
+	if result.Status != "unknown" {
+		t.Errorf("empty URL should be unknown, got %s", result.Status)
 	}
 }
 
-func TestProbeService_InvalidScheme(t *testing.T) {
-	// ftp:// is not http/https — should return unknown
-	req := httptest.NewRequest("GET", "/probe?url=ftp://example.com", nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rr.Code)
-	}
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+func TestProbeStatus_InvalidScheme(t *testing.T) {
+	result, _ := probeStatusRequest(t, "ftp://example.com")
 	if result.Status != "unknown" {
 		t.Errorf("ftp scheme should be unknown, got %s", result.Status)
 	}
 }
 
-func TestProbeService_MalformedURL(t *testing.T) {
-	req := httptest.NewRequest("GET", "/probe?url=not-a-url-at-all", nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
+func TestProbeStatus_ContentType(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
 
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
-	if result.Status != "unknown" {
-		t.Errorf("malformed URL should be unknown, got %s", result.Status)
+	svc := &serviceItem{Name: "test-svc", URL: upstream.URL}
+	req := httptest.NewRequest("GET", "/probe/test-svc/status", nil)
+	rr := httptest.NewRecorder()
+	handleProbeStatus(rr, req, svc)
+
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected application/json, got %s", ct)
 	}
 }
 
-func TestProbeService_MethodNotAllowed(t *testing.T) {
-	req := httptest.NewRequest("POST", "/probe?url=http://example.com", nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	if rr.Code != http.StatusMethodNotAllowed {
-		t.Errorf("expected 405, got %d", rr.Code)
-	}
-}
-
-func TestProbeService_RedirectFollowed(t *testing.T) {
-	// Upstream redirects to /target which returns 200
+func TestProbeStatus_RedirectFollowed(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/target" {
 			w.WriteHeader(http.StatusOK)
@@ -185,34 +221,13 @@ func TestProbeService_RedirectFollowed(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	var result probeResult
-	json.NewDecoder(rr.Body).Decode(&result)
+	result, _ := probeStatusRequest(t, upstream.URL)
 	if result.Status != "online" {
 		t.Errorf("redirect to 200 should be online, got %s", result.Status)
 	}
 }
 
-func TestProbeService_ContentType(t *testing.T) {
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer upstream.Close()
-
-	req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-	rr := httptest.NewRecorder()
-	probeService(rr, req)
-
-	ct := rr.Header().Get("Content-Type")
-	if ct != "application/json" {
-		t.Errorf("expected application/json, got %s", ct)
-	}
-}
-
-func TestProbeService_Concurrent(t *testing.T) {
+func TestProbeStatus_Concurrent(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -224,29 +239,20 @@ func TestProbeService_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			req := httptest.NewRequest("GET", "/probe?url="+upstream.URL, nil)
-			rr := httptest.NewRecorder()
-			probeService(rr, req)
-			var result probeResult
-			if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
-				errors <- err
-				return
-			}
+			result, _ := probeStatusRequest(t, upstream.URL)
 			if result.Status != "online" {
-				errors <- nil // count wrong status as an error by closing
+				errors <- nil
 			}
 		}()
 	}
 	wg.Wait()
 	close(errors)
-	for err := range errors {
-		if err != nil {
-			t.Errorf("concurrent probe error: %v", err)
-		}
+	for range errors {
+		t.Error("concurrent probe returned non-online status")
 	}
 }
 
-// ─── systemStats tests ───────────────────────────────────────────────────────
+// ─── systemStats tests ────────────────────────────────────────────────────────
 
 func TestSystemStats_MethodNotAllowed(t *testing.T) {
 	req := httptest.NewRequest("POST", "/system", nil)
@@ -270,8 +276,6 @@ func TestSystemStats_ValidResponse(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&info); err != nil {
 		t.Fatalf("decode error: %v", err)
 	}
-	// On Linux (Docker), /proc/meminfo exists — RAM should be populated.
-	// On macOS (dev), it may be zero — just verify structure is valid.
 	if info.RAM.TotalMB < 0 {
 		t.Errorf("negative total RAM: %d", info.RAM.TotalMB)
 	}
@@ -291,13 +295,12 @@ func TestSystemStats_ContentType(t *testing.T) {
 	rr := httptest.NewRecorder()
 	systemStats(rr, req)
 
-	ct := rr.Header().Get("Content-Type")
-	if ct != "application/json" {
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("expected application/json, got %s", ct)
 	}
 }
 
-// ─── CORS middleware tests ────────────────────────────────────────────────────
+// ─── CORS middleware tests ─────────────────────────────────────────────────────
 
 func TestCORSMiddleware_Headers(t *testing.T) {
 	handler := corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
