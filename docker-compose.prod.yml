@@ -1,0 +1,14 @@
+# Production compose — pulls pre-built image from Docker Hub
+# Usage:
+#   VERSION=v1.2.0 docker compose -f docker-compose.prod.yml up -d
+
+services:
+  hive:
+    image: beedevztech/hive:${VERSION:-latest}
+    ports:
+      - "3000:80"
+    volumes:
+      - ./config:/config
+    env_file:
+      - .env
+    restart: unless-stopped
