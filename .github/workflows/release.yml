@@ -62,6 +62,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       # ── Docker build ──────────────────────────────────────────────
+      - name: Set up QEMU (for multi-platform builds)
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -118,12 +121,13 @@ jobs:
         run: syft ${{ env.IMAGE }}:${{ steps.version.outputs.VERSION }} -o spdx-json > sbom.spdx.json
 
       # ── Push to Docker Hub ────────────────────────────────────────
-      - name: Push to Docker Hub
+      - name: Push to Docker Hub (multi-platform)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           build-args: VERSION=${{ steps.version.outputs.VERSION }}
           tags: |
             ${{ env.IMAGE }}:${{ steps.version.outputs.VERSION }}
