@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useConfig } from './hooks/useConfig'
 import { useWindowSize } from './hooks/useWindowSize'
 import { useAdapterStats } from './hooks/useAdapterStats'
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 // ─── Icon helper ──────────────────────────────────────────────────
 // Renders a URL as <img> or falls back to emoji/text.
@@ -862,6 +865,17 @@ function TokenGate({ onUnlock, isUnlocked, onLock }) {
   )
 }
 
+// ─── Sortable category wrapper ───────────────────────────────────
+
+function SortableItem({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 10 : 'auto' }}>
+      {children(listeners, attributes)}
+    </div>
+  )
+}
+
 // ─── Main App ────────────────────────────────────────────────────
 
 export default function App() {
@@ -873,6 +887,16 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [widgetsPanelOpen, setWidgetsPanelOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
+  const [activeTab, setActiveTab] = useState('services')
+  const [collapsedCategories, setCollapsedCategories] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('hive_collapsed') || '[]')) }
+    catch { return new Set() }
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  )
 
   // Re-validate stored token on load
   useEffect(() => {
@@ -1004,6 +1028,43 @@ export default function App() {
 
   const onlineCount = services.flatMap(s => s.items || []).length
 
+  const handleReorder = async (section, activeId, overId) => {
+    const prefix = section === 'services' ? 's-' : 'b-'
+    const oldIndex = parseInt(activeId.replace(prefix, ''))
+    const newIndex = parseInt(overId.replace(prefix, ''))
+    if (oldIndex === newIndex) return
+    const newConfig = JSON.parse(JSON.stringify(config))
+    newConfig[section] = arrayMove(newConfig[section], oldIndex, newIndex)
+    await authSave(newConfig)
+  }
+
+  const toggleCollapse = (key) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      localStorage.setItem('hive_collapsed', JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  const filterGroups = (groups) => {
+    const q = searchQuery.trim().toLowerCase()
+    return groups
+      .map((group, i) => ({
+        ...group,
+        _origIdx: i,
+        items: q
+          ? (group.items || []).filter(item =>
+              item.name?.toLowerCase().includes(q) ||
+              item.description?.toLowerCase().includes(q) ||
+              group.category?.toLowerCase().includes(q)
+            )
+          : (group.items || []),
+      }))
+      .filter(group => group.items.length > 0)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#0A0F1E', fontFamily: "'Outfit', 'Segoe UI', sans-serif", color: '#F1F5F9', position: 'relative', overflow: 'hidden' }}>
       <style>{`
@@ -1039,94 +1100,222 @@ export default function App() {
           <WidgetBar config={config} settings={settings} />
         </div>
 
-        {/* Toolbar */}
+        {/* Tab bar */}
         <div className={`fade ${visible ? 'show' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32, transitionDelay: '60ms' }}>
-          <div style={{ fontSize: 11, color: '#334155', display: 'flex', alignItems: 'center', gap: 4, marginRight: 'auto' }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ADE80', display: 'inline-block' }} />
-            {onlineCount} services
-          </div>
-        </div>
-
-        {/* Services */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', marginRight: 'auto' }}>Services</div>
-            {isUnlocked && (
-              <button
-                onClick={() => setEditModal({ type: 'category', section: 'services' })}
-                style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>
-                + Category
-              </button>
-            )}
-          </div>
-          {services.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${getColumns()}, 1fr)`, gap: isMobile ? 16 : 28 }}>
-              {services.map((group, gi) => (
-                <div key={gi} className={`fade ${visible ? 'show' : ''}`} style={{ transitionDelay: `${80 + gi * 50}ms` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <span>{group.icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
-                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
-                    {isUnlocked && (<>
-                      <button onClick={() => setEditModal({ type: 'category', section: 'services', categoryIdx: gi, category: group })}
-                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
-                      <button onClick={() => handleDeleteCategory('services', gi)}
-                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
-                      <button onClick={() => setEditModal({ type: 'service', categoryIdx: gi })}
-                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
-                    </>)}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {(group.items || []).map((item, ii) => (
-                      <ServiceCard key={ii} item={item} compact={isMobile}
-                        onEdit={isUnlocked ? (it) => setEditModal({ type: 'service', categoryIdx: gi, itemIdx: ii, item: it }) : null}
-                        onDelete={isUnlocked ? () => handleDeleteService(gi, ii) : null} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+          style={{ display: 'flex', alignItems: 'center', marginBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.06)', transitionDelay: '60ms' }}>
+          {[
+            { key: 'services', label: 'Services', count: services.flatMap(s => s.items || []).length },
+            { key: 'bookmarks', label: 'Bookmarks', count: bookmarks.flatMap(b => b.items || []).length },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => { setActiveTab(tab.key); setSearchQuery('') }}
+              style={{
+                padding: '8px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === tab.key ? '#6366F1' : 'transparent'}`,
+                marginBottom: -1, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                color: activeTab === tab.key ? '#E2E8F0' : '#475569',
+                display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s',
+              }}>
+              {tab.label}
+              <span style={{
+                fontSize: 10, padding: '1px 5px', borderRadius: 8,
+                background: activeTab === tab.key ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+                color: activeTab === tab.key ? '#818CF8' : '#334155',
+              }}>{tab.count}</span>
+            </button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Filter…"
+            style={{
+              padding: '5px 10px', background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6,
+              color: '#E2E8F0', fontSize: 12, outline: 'none', width: 160, marginRight: 8,
+            }}
+          />
+          {isUnlocked && (
+            <button onClick={() => setEditModal({ type: 'category', section: activeTab })}
+              style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px', marginBottom: 1 }}>
+              + Category
+            </button>
           )}
         </div>
 
-        {/* Bookmarks */}
-        <div className={`fade ${visible ? 'show' : ''}`} style={{ transitionDelay: '300ms' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: '#334155', letterSpacing: '0.1em', textTransform: 'uppercase', marginRight: 'auto' }}>Bookmarks</div>
-            {isUnlocked && (
-              <button
-                onClick={() => setEditModal({ type: 'category', section: 'bookmarks' })}
-                style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>
-                + Category
-              </button>
+        {/* Services tab */}
+        {activeTab === 'services' && (
+          <div>
+            {services.length > 0 ? (
+              searchQuery ? (
+                filterGroups(services).length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${getColumns()}, 1fr)`, gap: isMobile ? 16 : 28 }}>
+                    {filterGroups(services).map((group) => {
+                      const origIdx = group._origIdx
+                      const key = `services-${origIdx}`
+                      return (
+                        <div key={origIdx}>
+                          <div onClick={() => toggleCollapse(key)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}>
+                            <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>▼</span>
+                            <span>{group.icon}</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {group.items.map((item, ii) => (
+                              <ServiceCard key={ii} item={item} compact={isMobile}
+                                onEdit={isUnlocked ? (it) => setEditModal({ type: 'service', categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
+                                onDelete={isUnlocked ? () => handleDeleteService(origIdx, ii) : null} />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>No services match &quot;{searchQuery}&quot;</div>
+                )
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => over && handleReorder('services', active.id, over.id)}>
+                  <SortableContext items={services.map((_, i) => `s-${i}`)} strategy={rectSortingStrategy}>
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${getColumns()}, 1fr)`, gap: isMobile ? 16 : 28 }}>
+                      {services.map((group, origIdx) => {
+                        const key = `services-${origIdx}`
+                        const isCollapsed = collapsedCategories.has(key)
+                        return (
+                          <SortableItem key={origIdx} id={`s-${origIdx}`}>
+                            {(dragListeners, dragAttrs) => (
+                              <div className={`fade ${visible ? 'show' : ''}`} style={{ transitionDelay: `${80 + origIdx * 50}ms` }}>
+                                <div onClick={() => toggleCollapse(key)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
+                                  <span {...dragListeners} {...dragAttrs} onClick={e => e.stopPropagation()}
+                                    style={{ cursor: 'grab', color: '#1E293B', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1 }}>⠿</span>
+                                  <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
+                                  <span>{group.icon}</span>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                                  {isUnlocked && (
+                                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 2 }}>
+                                      <button onClick={() => setEditModal({ type: 'category', section: 'services', categoryIdx: origIdx, category: group })}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
+                                      <button onClick={() => handleDeleteCategory('services', origIdx)}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
+                                      <button onClick={() => setEditModal({ type: 'service', categoryIdx: origIdx })}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
+                                    </div>
+                                  )}
+                                </div>
+                                {!isCollapsed && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {group.items.map((item, ii) => (
+                                      <ServiceCard key={ii} item={item} compact={isMobile}
+                                        onEdit={isUnlocked ? (it) => setEditModal({ type: 'service', categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
+                                        onDelete={isUnlocked ? () => handleDeleteService(origIdx, ii) : null} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </SortableItem>
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )
+            ) : (
+              <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>No services yet</div>
             )}
           </div>
-          {bookmarks.map((group, gi) => (
-            <div key={gi} style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span>{group.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
-                {isUnlocked && (<>
-                  <button onClick={() => setEditModal({ type: 'category', section: 'bookmarks', categoryIdx: gi, category: group })}
-                    style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
-                  <button onClick={() => handleDeleteCategory('bookmarks', gi)}
-                    style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
-                  <button onClick={() => setEditModal({ type: 'bookmark', categoryIdx: gi })}
-                    style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
-                </>)}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-                {(group.items || []).map((item, ii) => (
-                  <BookmarkCard key={ii} item={item}
-                    onEdit={isUnlocked ? (it) => setEditModal({ type: 'bookmark', categoryIdx: gi, itemIdx: ii, item: it }) : null}
-                    onDelete={isUnlocked ? () => handleDeleteBookmark(gi, ii) : null} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        )}
+
+        {/* Bookmarks tab */}
+        {activeTab === 'bookmarks' && (
+          <div>
+            {bookmarks.length > 0 ? (
+              searchQuery ? (
+                filterGroups(bookmarks).length > 0 ? (
+                  <div>
+                    {filterGroups(bookmarks).map((group) => {
+                      const origIdx = group._origIdx
+                      const key = `bookmarks-${origIdx}`
+                      return (
+                        <div key={origIdx} style={{ marginBottom: 24 }}>
+                          <div onClick={() => toggleCollapse(key)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}>
+                            <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>▼</span>
+                            <span>{group.icon}</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                            {group.items.map((item, ii) => (
+                              <BookmarkCard key={ii} item={item}
+                                onEdit={isUnlocked ? (it) => setEditModal({ type: 'bookmark', categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
+                                onDelete={isUnlocked ? () => handleDeleteBookmark(origIdx, ii) : null} />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>No bookmarks match &quot;{searchQuery}&quot;</div>
+                )
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => over && handleReorder('bookmarks', active.id, over.id)}>
+                  <SortableContext items={bookmarks.map((_, i) => `b-${i}`)} strategy={rectSortingStrategy}>
+                    <div>
+                      {bookmarks.map((group, origIdx) => {
+                        const key = `bookmarks-${origIdx}`
+                        const isCollapsed = collapsedCategories.has(key)
+                        return (
+                          <SortableItem key={origIdx} id={`b-${origIdx}`}>
+                            {(dragListeners, dragAttrs) => (
+                              <div style={{ marginBottom: 24 }}>
+                                <div onClick={() => toggleCollapse(key)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
+                                  <span {...dragListeners} {...dragAttrs} onClick={e => e.stopPropagation()}
+                                    style={{ cursor: 'grab', color: '#1E293B', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1 }}>⠿</span>
+                                  <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
+                                  <span>{group.icon}</span>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                                  {isUnlocked && (
+                                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 2 }}>
+                                      <button onClick={() => setEditModal({ type: 'category', section: 'bookmarks', categoryIdx: origIdx, category: group })}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
+                                      <button onClick={() => handleDeleteCategory('bookmarks', origIdx)}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
+                                      <button onClick={() => setEditModal({ type: 'bookmark', categoryIdx: origIdx })}
+                                        style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
+                                    </div>
+                                  )}
+                                </div>
+                                {!isCollapsed && (
+                                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                                    {group.items.map((item, ii) => (
+                                      <BookmarkCard key={ii} item={item}
+                                        onEdit={isUnlocked ? (it) => setEditModal({ type: 'bookmark', categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
+                                        onDelete={isUnlocked ? () => handleDeleteBookmark(origIdx, ii) : null} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </SortableItem>
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )
+            ) : (
+              <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>No bookmarks yet</div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ marginTop: 52, textAlign: 'center', fontSize: 11, color: '#1E293B', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
