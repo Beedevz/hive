@@ -250,7 +250,8 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
   return (
     <div style={{ position: 'relative' }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+      <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}
+        title={[item.name, item.description].filter(Boolean).join('\n')}>
         <div style={{
           background: hov ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)',
           border: `1px solid ${hov ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.07)'}`,
@@ -339,18 +340,20 @@ function BookmarkCard({ item, onEdit, onDelete }) {
   return (
     <div style={{ position: 'relative' }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+      <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}
+        title={[item.name, item.description].filter(Boolean).join('\n')}>
         <div style={{
           background: hov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 10, padding: '10px 14px',
+          borderRadius: 10, padding: '0 14px',
           display: 'flex', alignItems: 'center', gap: 10,
+          height: 52, overflow: 'hidden',
           transition: 'all 0.15s',
         }}>
           {renderIcon(item.icon, '🔖', 18)}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#CBD5E1' }}>{item.name}</div>
-            {item.description && <div style={{ fontSize: 11, color: '#475569' }}>{item.description}</div>}
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+            {item.description && <div style={{ fontSize: 11, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
           </div>
         </div>
       </a>
