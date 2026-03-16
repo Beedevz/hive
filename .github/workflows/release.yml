@@ -29,7 +29,7 @@ jobs:
 
       # ── Tests (gate before publish) ───────────────────────────────
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: config-api/go.mod
           cache-dependency-path: config-api/go.sum
