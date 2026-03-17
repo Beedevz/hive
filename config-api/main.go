@@ -560,6 +560,72 @@ func main() {
 		}
 		backupConfig(w, r)
 	}))
+	mux.HandleFunc("/logo", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			customLogo := filepath.Join(configDir, "logo.png")
+			if _, err := os.Stat(customLogo); err == nil {
+				http.ServeFile(w, r, customLogo)
+				return
+			}
+			http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
+		case http.MethodPost:
+			if !requireAuth(w, r) {
+				return
+			}
+			if err := r.ParseMultipartForm(5 << 20); err != nil {
+				http.Error(w, "File too large (max 5MB)", 400)
+				return
+			}
+			file, header, err := r.FormFile("logo")
+			if err != nil {
+				http.Error(w, "Missing file field 'logo'", 400)
+				return
+			}
+			defer file.Close()
+			ct := header.Header.Get("Content-Type")
+			allowed := map[string]bool{"image/png": true, "image/jpeg": true, "image/svg+xml": true, "image/webp": true, "image/gif": true}
+			if !allowed[ct] {
+				// Fallback: check first 512 bytes
+				buf := make([]byte, 512)
+				n, _ := file.Read(buf)
+				detected := http.DetectContentType(buf[:n])
+				if !allowed[detected] {
+					http.Error(w, "Unsupported image type", 415)
+					return
+				}
+				// Seek back to start
+				if seeker, ok := file.(io.Seeker); ok {
+					seeker.Seek(0, io.SeekStart)
+				}
+			}
+			dst, err := os.OpenFile(filepath.Join(configDir, "logo.png"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				http.Error(w, "Write error: "+err.Error(), 500)
+				return
+			}
+			defer dst.Close()
+			if _, err := io.Copy(dst, file); err != nil {
+				http.Error(w, "Write error: "+err.Error(), 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"status":"ok"}`))
+		case http.MethodDelete:
+			if !requireAuth(w, r) {
+				return
+			}
+			customLogo := filepath.Join(configDir, "logo.png")
+			if err := os.Remove(customLogo); err != nil && !os.IsNotExist(err) {
+				http.Error(w, "Delete error: "+err.Error(), 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"status":"ok"}`))
+		default:
+			http.Error(w, "Method not allowed", 405)
+		}
+	}))
 	mux.HandleFunc("/probe/", corsMiddleware(handleProbe))
 	mux.HandleFunc("/system", corsMiddleware(systemStats))
 	mux.HandleFunc("/adapters/", corsMiddleware(handleAdapter))
