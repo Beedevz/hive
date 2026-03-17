@@ -887,6 +887,7 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [widgetsPanelOpen, setWidgetsPanelOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
+  const [logoVer, setLogoVer] = useState(Date.now())
   const [activeTab, setActiveTab] = useState('services')
   const [collapsedCategories, setCollapsedCategories] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('hive_collapsed') || '[]')) }
@@ -1028,6 +1029,27 @@ export default function App() {
 
   const onlineCount = services.flatMap(s => s.items || []).length
 
+  const handleLogoUpload = async (file) => {
+    if (!file) return
+    const fd = new FormData()
+    fd.append('logo', file)
+    const res = await fetch('/api/logo', {
+      method: 'POST',
+      headers: { 'X-Hive-Token': token },
+      body: fd,
+    })
+    if (res.ok) setLogoVer(Date.now())
+    else alert('Logo upload failed: ' + (await res.text()))
+  }
+
+  const handleLogoDelete = async () => {
+    const res = await fetch('/api/logo', {
+      method: 'DELETE',
+      headers: { 'X-Hive-Token': token },
+    })
+    if (res.ok) setLogoVer(Date.now())
+  }
+
   const handleReorder = async (section, activeId, overId) => {
     const prefix = section === 'services' ? 's-' : 'b-'
     const oldIndex = parseInt(activeId.replace(prefix, ''))
@@ -1082,7 +1104,34 @@ export default function App() {
 
       {/* Top-left logo */}
       <div className={`fade ${visible ? 'show' : ''}`} style={{ position: 'fixed', top: 16, left: 20, zIndex: 50 }}>
-        <img src="/logo.png" alt="Hive" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+        <div style={{ position: 'relative', width: 120, height: 120 }}>
+          <img src={`/api/logo?v=${logoVer}`} alt="Hive" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+          {isUnlocked && (
+            <>
+              <label title="Upload logo" style={{
+                position: 'absolute', inset: 0, borderRadius: 12,
+                background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 4,
+                cursor: 'pointer', opacity: 0, transition: 'opacity 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                onMouseLeave={e => e.currentTarget.style.opacity = 0}
+              >
+                <span style={{ fontSize: 22 }}>🖼️</span>
+                <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>Change</span>
+                <input type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => handleLogoUpload(e.target.files[0])} />
+              </label>
+              <button title="Reset to default" onClick={handleLogoDelete} style={{
+                position: 'absolute', top: -6, right: -6,
+                width: 20, height: 20, borderRadius: '50%',
+                background: '#475569', border: 'none',
+                color: '#fff', fontSize: 11, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>↺</button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Top-right controls */}
