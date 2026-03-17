@@ -34,17 +34,38 @@ func ErrResult(adapterType, msg string) AdapterResult {
 	return AdapterResult{Adapter: adapterType, Ok: false, Stats: []StatItem{}, Error: &msg}
 }
 
-// ExpandEnvVars resolves ${VAR} placeholders in adapter_config values.
-func ExpandEnvVars(config map[string]interface{}) map[string]interface{} {
+// ExpandEnvVars resolves ${VAR} and ${secret:KEY} placeholders in adapter_config values.
+// secrets map is optional (pass nil to skip secret resolution).
+func ExpandEnvVars(config map[string]interface{}, secrets map[string]string) map[string]interface{} {
 	result := make(map[string]interface{}, len(config))
 	for k, v := range config {
-		if s, ok := v.(string); ok && strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
-			result[k] = os.Getenv(s[2 : len(s)-1])
+		if s, ok := v.(string); ok {
+			result[k] = resolveVar(s, secrets)
 		} else {
 			result[k] = v
 		}
 	}
 	return result
+}
+
+// resolveVar expands a single placeholder:
+//   - ${secret:KEY} → looked up from secrets map
+//   - ${VAR}        → looked up from environment
+//   - anything else → returned as-is
+func resolveVar(s string, secrets map[string]string) string {
+	if strings.HasPrefix(s, "${secret:") && strings.HasSuffix(s, "}") {
+		key := s[9 : len(s)-1]
+		if secrets != nil {
+			if val, ok := secrets[key]; ok {
+				return val
+			}
+		}
+		return ""
+	}
+	if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
+		return os.Getenv(s[2 : len(s)-1])
+	}
+	return s
 }
 
 // ─── Package-internal Helpers ─────────────────────────────────────
