@@ -45,16 +45,19 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-`docker-compose.prod.yml` pulls the pre-built image from ghcr.io. To pin a specific version:
+`docker-compose.prod.yml` pulls the pre-built image from Docker Hub. To pin a specific version:
 
 ```bash
-VERSION=v1.2.0 docker compose -f docker-compose.prod.yml up -d
+VERSION=v1.3.1 docker compose -f docker-compose.prod.yml up -d
 ```
 
 ### Helm (Kubernetes)
 
 ```bash
-helm install hive oci://ghcr.io/beedevz/helm/hive \
+helm repo add hive https://beedevz.github.io/hive
+helm repo update
+
+helm install hive hive/hive \
   --set hiveToken=your-secret-token \
   --set persistence.enabled=true
 ```
@@ -62,7 +65,7 @@ helm install hive oci://ghcr.io/beedevz/helm/hive \
 With Ingress:
 
 ```bash
-helm install hive oci://ghcr.io/beedevz/helm/hive \
+helm install hive hive/hive \
   --set hiveToken=your-secret-token \
   --set persistence.enabled=true \
   --set ingress.enabled=true \
@@ -70,6 +73,13 @@ helm install hive oci://ghcr.io/beedevz/helm/hive \
   --set "ingress.hosts[0].host=hive.example.com" \
   --set "ingress.hosts[0].paths[0].path=/" \
   --set "ingress.hosts[0].paths[0].pathType=Prefix"
+```
+
+To upgrade:
+
+```bash
+helm repo update
+helm upgrade hive hive/hive --reuse-values
 ```
 
 ---
@@ -130,9 +140,7 @@ widgets:
   - type: weather
     enabled: true
     config:
-      lat: 41.01
-      lon: 28.98
-      location_name: Istanbul
+      location_name: Istanbul   # city name; leave empty to use browser geolocation
 ```
 
 ### Environment variables
@@ -224,7 +232,7 @@ Adapters pull live metrics from your services and display them as stat badges on
 
 ## Icons
 
-Use any emoji or image URL in the `icon` field. The [selfh.st icon library](https://selfh.st/icons/) covers most self-hosted apps:
+Use any emoji or image URL in the `icon` field. The UI includes a built-in icon picker (click 🔍 next to the icon field) that lets you search and select from the [selfh.st icon library](https://selfh.st/icons/). You can also paste any URL directly:
 
 ```
 https://cdn.jsdelivr.net/gh/selfhst/icons/svg/{service-name}.svg

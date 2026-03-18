@@ -1,0 +1,15 @@
+apiVersion: v2
+name: hive
+description: A self-hosted, config-driven homelab start page
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - homelab
+  - homepage
+  - dashboard
+home: https://github.com/beedevz/hive
+sources:
+  - https://github.com/beedevz/hive
+maintainers:
+  - name: beedevz
