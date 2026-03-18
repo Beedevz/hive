@@ -757,6 +757,10 @@ func main() {
 	mux.HandleFunc("/probe/", corsMiddleware(handleProbe))
 	mux.HandleFunc("/system", corsMiddleware(systemStats))
 	mux.HandleFunc("/adapters/", corsMiddleware(handleAdapter))
+	mux.HandleFunc("/adapters-catalog", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(adapters.Catalog)
+	}))
 	mux.HandleFunc("/config/raw", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
