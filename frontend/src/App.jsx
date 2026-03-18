@@ -378,7 +378,7 @@ function BookmarkCard({ item, onEdit, onDelete }) {
           border: '1px solid var(--color-overlay-md2)',
           borderRadius: 10, padding: '0 14px',
           display: 'flex', alignItems: 'center', gap: 10,
-          height: 52, overflow: 'hidden',
+          height: 64, overflow: 'hidden',
           transition: 'all 0.15s',
         }}>
           {renderIcon(item.icon, '🔖', 18)}
