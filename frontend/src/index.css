@@ -78,15 +78,15 @@
   --color-blue:                #2563EB;
   --color-white:               #ffffff;
 
-  /* Black overlays replace white overlays */
-  --color-overlay-xs:          rgba(0,0,0,0.04);
-  --color-overlay-sm:          rgba(0,0,0,0.06);
-  --color-overlay-md:          rgba(0,0,0,0.07);
-  --color-overlay-md2:         rgba(0,0,0,0.08);
-  --color-overlay-md3:         rgba(0,0,0,0.09);
-  --color-overlay-lg:          rgba(0,0,0,0.10);
-  --color-overlay-lg2:         rgba(0,0,0,0.11);
-  --color-border:              rgba(0,0,0,0.15);
+  /* In light mode cards need solid white to stand out on the gray page */
+  --color-overlay-xs:          rgba(255,255,255,0.60);
+  --color-overlay-sm:          #ffffff;               /* card background */
+  --color-overlay-md:          rgba(255,255,255,0.90);
+  --color-overlay-md2:         rgba(0,0,0,0.05);      /* separator / tag bg */
+  --color-overlay-md3:         rgba(0,0,0,0.07);      /* icon container */
+  --color-overlay-lg:          rgba(0,0,0,0.06);      /* input backgrounds */
+  --color-overlay-lg2:         rgba(0,0,0,0.04);      /* card hover */
+  --color-border:              rgba(0,0,0,0.12);
   --color-border-strong:       rgba(0,0,0,0.18);
 
   /* Scrims slightly reduced in light mode */
@@ -144,12 +144,12 @@ input, textarea, select {
 
 a { color: inherit; text-decoration: none; }
 
-.fade-up {
+.fade {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
+  transform: translateY(12px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
-.fade-up.show {
+.fade.show {
   opacity: 1;
   transform: translateY(0);
 }
