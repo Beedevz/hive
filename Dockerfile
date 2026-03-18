@@ -7,7 +7,7 @@ COPY frontend/ .
 RUN npm run build
 
 # ── Stage 2: Build Go API ─────────────────────────────────────────
-FROM golang:1.24-alpine AS api-builder
+FROM golang:1.25-alpine AS api-builder
 ARG VERSION=dev
 WORKDIR /app
 COPY config-api/go.mod config-api/go.sum ./
