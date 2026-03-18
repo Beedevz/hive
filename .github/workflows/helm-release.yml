@@ -34,12 +34,20 @@ jobs:
           echo "Chart version set to ${VERSION}"
           cat helm/Chart.yaml
 
+      - name: Ensure gh-pages branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin gh-pages; then
+            git switch --orphan gh-pages
+            git commit --allow-empty -m "chore: initialize gh-pages for Helm chart repo"
+            git push origin gh-pages
+            git switch -
+          fi
+
       # chart-releaser packages helm/ and publishes to gh-pages.
-      # First run creates the gh-pages branch automatically.
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
-          charts_dir: .          # looks for Chart.yaml in subdirs of repo root
+          charts_dir: .        # looks for Chart.yaml in subdirs of repo root
           skip_existing: true    # idempotent — safe to re-run on same tag
