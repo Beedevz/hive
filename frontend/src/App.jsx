@@ -364,7 +364,9 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
   const [hov, setHov] = useState(false)
   const [status, setStatus] = useState('unknown')
   const [latency, setLatency] = useState(null)
-  const { stats, error: adapterError, loading: adapterLoading } = useAdapterStats(item.name, !!item.adapter)
+  const { stats: allStats, error: adapterError, loading: adapterLoading } = useAdapterStats(item.name, !!item.adapter)
+  const versionStat = allStats.find(s => s.label === 'Version')
+  const stats = allStats.filter(s => s.label !== 'Version')
 
   useEffect(() => {
     const check = async () => {
@@ -405,6 +407,11 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {item.name}
+                {versionStat && (
+                  <span style={{ fontSize: 10, color: 'var(--color-text-muted)', background: 'var(--color-overlay-md2)', padding: '1px 6px', borderRadius: 4, fontWeight: 400 }}>
+                    {versionStat.value}
+                  </span>
+                )}
                 {item.tag && (
                   <span style={{ fontSize: 10, color: 'var(--color-text-dim)', background: 'var(--color-overlay-md)', padding: '1px 6px', borderRadius: 4 }}>
                     {item.tag}
