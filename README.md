@@ -75,12 +75,14 @@ helm install hive hive/hive \
   --set "ingress.hosts[0].paths[0].pathType=Prefix"
 ```
 
-To upgrade:
+To install or upgrade:
 
 ```bash
 helm repo update
-helm upgrade hive hive/hive --reuse-values
+helm upgrade --install hive hive/hive --reuse-values
 ```
+
+> `--install` installs if no release exists, upgrades if it does — safe to use every time.
 
 ---
 
