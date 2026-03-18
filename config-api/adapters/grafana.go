@@ -26,6 +26,14 @@ func fetchGrafanaStats(cfg map[string]interface{}, baseURL string) AdapterResult
 
 	stats := []StatItem{}
 
+	// Version — GET /api/health is public (no auth needed).
+	var health struct {
+		Version string `json:"version"`
+	}
+	if err := do("/api/health", &health); err == nil && health.Version != "" {
+		stats = append(stats, StatItem{Label: "Version", Value: "v" + health.Version, Status: "info"})
+	}
+
 	var dashboards []struct{ ID int `json:"id"` }
 	if err := do("/api/search?type=dash-db&limit=500", &dashboards); err != nil {
 		return errResult("grafana", "API unreachable: "+err.Error())

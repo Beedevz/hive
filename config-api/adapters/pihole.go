@@ -100,13 +100,17 @@ func piholeV6Auth(client *http.Client, baseURL, password string) (string, error)
 
 // piholeV6Stats fetches summary stats from Pi-hole v6 API.
 func piholeV6Stats(client *http.Client, baseURL, sid string) (AdapterResult, bool) {
-	url := baseURL + "/api/stats/summary"
+	sidParam := ""
 	if sid != "" {
-		url += "?sid=" + sid
+		sidParam = "?sid=" + sid
 	}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return AdapterResult{}, false
+
+	doGet := func(path string, dest interface{}) error {
+		req, err := http.NewRequest("GET", baseURL+path+sidParam, nil)
+		if err != nil {
+			return err
+		}
+		return doJSON(client, req, dest)
 	}
 
 	var data struct {
@@ -119,12 +123,24 @@ func piholeV6Stats(client *http.Client, baseURL, sid string) (AdapterResult, boo
 			Active int `json:"active"`
 		} `json:"clients"`
 	}
-	if err := doJSON(client, req, &data); err != nil {
+	if err := doGet("/api/stats/summary", &data); err != nil {
 		return AdapterResult{}, false
 	}
 
-	// Sanity check — if total is 0 and no clients, might be an unexpected response
 	stats := buildPiholeStats("", data.Queries.Total, data.Queries.Blocked, data.Queries.PercentBlocked, data.Clients.Active)
+
+	// Version — GET /api/info/version returns core.tag (e.g. "v6.0.1")
+	var verResp struct {
+		Version struct {
+			Core struct {
+				Tag string `json:"tag"`
+			} `json:"core"`
+		} `json:"version"`
+	}
+	if err := doGet("/api/info/version", &verResp); err == nil && verResp.Version.Core.Tag != "" {
+		stats = append([]StatItem{{Label: "Version", Value: verResp.Version.Core.Tag, Status: "info"}}, stats...)
+	}
+
 	return AdapterResult{Adapter: "pihole", Ok: true, Stats: stats}, true
 }
 
