@@ -5,6 +5,7 @@ import { useAdapterStats } from './hooks/useAdapterStats'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import * as LucideIcons from 'lucide-react'
 
 // ─── Icon helper ──────────────────────────────────────────────────
 // Renders a URL as <img> or falls back to emoji/text.
@@ -14,6 +15,110 @@ function renderIcon(icon, fallback, size = 24) {
     return <img src={val} alt="" style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
   }
   return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{val || fallback}</span>
+}
+
+// Renders a category/tab icon — supports lucide: prefix, emoji, or URL.
+function renderCategoryIcon(icon, size = 16) {
+  if (!icon) return null
+  if (icon.startsWith('lucide:')) {
+    const name = icon.slice(7)
+    const LIcon = LucideIcons[name]
+    if (LIcon) return <LIcon size={size} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+  }
+  return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{icon}</span>
+}
+
+// ─── Curated Lucide icon list for homelab use ─────────────────────
+const LUCIDE_ICON_LIST = [
+  'Server','Database','HardDrive','Cpu','Monitor','Laptop','Smartphone','Tablet',
+  'Network','Wifi','Globe','Router','Shield','ShieldCheck','Lock','Key',
+  'Cloud','CloudUpload','CloudDownload','Container','Box','Package','Layers',
+  'FolderOpen','Folder','FileText','File','Archive','BookOpen','Book',
+  'Home','Building','Building2','Warehouse','LayoutDashboard',
+  'Settings','Settings2','Wrench','Tool','Hammer','Cog',
+  'Activity','BarChart2','BarChart','TrendingUp','Gauge','Radio',
+  'Camera','Video','Tv','Music','Headphones','Download','Upload',
+  'Mail','Bell','Calendar','Clock','Search','Terminal','Code2','GitBranch',
+  'Users','User','UserCheck','Star','Heart','Bookmark','Flag','Tag',
+  'Play','Pause','RefreshCw','Power','Zap','Sun','Moon','Thermometer',
+]
+
+// ─── Lucide Icon Picker ───────────────────────────────────────────
+function LucideIconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const filtered = LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+  const currentIsLucide = value?.startsWith('lucide:')
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => { setOpen(o => !o); setSearch('') }}
+        title="Pick Lucide icon"
+        style={{
+          padding: '6px 10px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)',
+          borderRadius: 8, cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12,
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+        {currentIsLucide
+          ? renderCategoryIcon(value, 16)
+          : <LucideIcons.Shapes size={14} />}
+        <span>Icons</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 200,
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          borderRadius: 12, padding: 12, width: 280, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        }}>
+          <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search icons…"
+            style={{
+              width: '100%', padding: '6px 10px', background: 'var(--color-overlay-md)',
+              border: '1px solid var(--color-border)', borderRadius: 7, color: 'var(--color-text-primary)',
+              fontSize: 12, outline: 'none', fontFamily: 'inherit', marginBottom: 10,
+            }} />
+          {currentIsLucide && (
+            <button type="button" onClick={() => { onChange(''); setOpen(false) }}
+              style={{ width: '100%', padding: '5px', marginBottom: 8, background: 'var(--color-red-bg)', border: '1px solid var(--color-red-border)', borderRadius: 7, color: 'var(--color-red)', cursor: 'pointer', fontSize: 11 }}>
+              Remove icon → use emoji
+            </button>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+            {filtered.map(name => {
+              const LIcon = LucideIcons[name]
+              if (!LIcon) return null
+              const isSelected = value === `lucide:${name}`
+              return (
+                <button key={name} type="button" title={name}
+                  onClick={() => { onChange(`lucide:${name}`); setOpen(false) }}
+                  style={{
+                    padding: 7, borderRadius: 7, border: `1px solid ${isSelected ? 'var(--color-accent)' : 'transparent'}`,
+                    background: isSelected ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isSelected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+                    transition: 'none',
+                  }}>
+                  <LIcon size={16} strokeWidth={1.75} />
+                </button>
+              )
+            })}
+            {filtered.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-text-ghost)', fontSize: 11, padding: '12px 0' }}>No results</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Sub Components ───────────────────────────────────────────────
@@ -494,17 +599,29 @@ function CategoryModal({ category, section, onSave, onClose }) {
   const defaults = { category: '', icon: section === 'services' ? '📦' : '🔖' }
   const [form, setForm] = useState(category ? { category: category.category, icon: category.icon || '' } : defaults)
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const inputStyle = { width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 380, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{category ? 'Rename Category' : 'New Category'}</h3>
-        {[['category', 'Name'], ['icon', 'Icon (emoji)']].map(([k, l]) => (
-          <div key={k}>
-            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>{l}</div>
-            <input value={form[k] || ''} onChange={e => set(k, e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Name</div>
+          <input value={form.category || ''} onChange={e => set('category', e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input value={form.icon?.startsWith('lucide:') ? '' : (form.icon || '')}
+              onChange={e => set('icon', e.target.value)}
+              placeholder={form.icon?.startsWith('lucide:') ? '— Lucide icon selected —' : 'emoji e.g. 📦'}
+              disabled={form.icon?.startsWith('lucide:')}
+              style={{ ...inputStyle, flex: 1, opacity: form.icon?.startsWith('lucide:') ? 0.5 : 1 }} />
+            <LucideIconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
           </div>
-        ))}
+          <div style={{ fontSize: 10, color: 'var(--color-text-ghost)', marginTop: 4 }}>
+            Type an emoji or use the icon picker →
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
           <button onClick={() => form.category.trim() && onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
@@ -533,8 +650,15 @@ function SectionModal({ section, onSave, onClose }) {
           <input value={form.label} onChange={e => set('label', e.target.value)} placeholder="e.g. DevOps" style={inputStyle} />
         </div>
         <div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon (emoji)</div>
-          <input value={form.icon} onChange={e => set('icon', e.target.value)} placeholder="e.g. ⚙️" style={inputStyle} />
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input value={form.icon?.startsWith('lucide:') ? '' : form.icon}
+              onChange={e => set('icon', e.target.value)}
+              placeholder={form.icon?.startsWith('lucide:') ? '— Lucide icon selected —' : 'emoji e.g. ⚙️'}
+              disabled={form.icon?.startsWith('lucide:')}
+              style={{ ...inputStyle, flex: 1, opacity: form.icon?.startsWith('lucide:') ? 0.5 : 1 }} />
+            <LucideIconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
+          </div>
         </div>
         {!section && (
           <div>
@@ -1674,7 +1798,7 @@ export default function App() {
                             color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                             display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s', whiteSpace: 'nowrap',
                           }}>
-                            {tab.icon && <span style={{ fontSize: 13 }}>{tab.icon}</span>}
+                            {tab.icon && renderCategoryIcon(tab.icon, 13)}
                             {tab.label}
                             <span style={{
                               fontSize: 10, padding: '1px 5px', borderRadius: 8,
@@ -1763,7 +1887,7 @@ export default function App() {
                             <div onClick={() => toggleCollapse(key)}
                               style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}>
                               <span style={{ fontSize: 8, color: 'var(--color-text-ghost)', width: 10, flexShrink: 0 }}>▼</span>
-                              <span>{group.icon}</span>
+                              {renderCategoryIcon(group.icon, 15)}
                               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
                               <div style={{ flex: 1, height: 1, background: 'var(--color-overlay-sm)' }} />
                             </div>
@@ -1793,7 +1917,7 @@ export default function App() {
                                     <span {...dragListeners} {...dragAttrs} onClick={e => e.stopPropagation()}
                                       style={{ cursor: 'grab', color: 'var(--color-bg-subtle)', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1 }}>⠿</span>
                                     <span style={{ fontSize: 8, color: 'var(--color-text-ghost)', width: 10, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
-                                    <span>{group.icon}</span>
+                                    {renderCategoryIcon(group.icon, 15)}
                                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
                                     <div style={{ flex: 1, height: 1, background: 'var(--color-overlay-sm)' }} />
                                     {isUnlocked && (
