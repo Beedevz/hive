@@ -26,10 +26,10 @@ function ClockWidget() {
   }, [])
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 52, fontWeight: 300, letterSpacing: '-2px', color: '#F1F5F9', fontFamily: 'monospace', lineHeight: 1 }}>
+      <div style={{ fontSize: 52, fontWeight: 300, letterSpacing: '-2px', color: 'var(--color-text-bright)', fontFamily: 'monospace', lineHeight: 1 }}>
         {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
       </div>
-      <div style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>
+      <div style={{ fontSize: 13, color: 'var(--color-text-dim)', marginTop: 6 }}>
         {now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
       </div>
     </div>
@@ -93,17 +93,17 @@ function WeatherWidget({ widget }) {
   const tMin = daily?.temperature_2m_min?.[0]
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#64748B' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--color-text-dim)' }}>
       <span style={{ fontSize: 20 }}>{WMO_ICONS[cur.weathercode] || '🌡️'}</span>
-      <span style={{ color: '#94A3B8', fontWeight: 500 }}>{Math.round(cur.temperature_2m)}°C</span>
+      <span style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>{Math.round(cur.temperature_2m)}°C</span>
       {tMax != null && tMin != null && (
         <span style={{ fontSize: 11 }}>
-          <span style={{ color: '#F87171' }}>↑{Math.round(tMax)}°</span>
+          <span style={{ color: 'var(--color-red)' }}>↑{Math.round(tMax)}°</span>
           {' '}
-          <span style={{ color: '#60A5FA' }}>↓{Math.round(tMin)}°</span>
+          <span style={{ color: 'var(--color-blue)' }}>↓{Math.round(tMin)}°</span>
         </span>
       )}
-      {cfg.location_name && <span style={{ color: '#475569' }}>· {cfg.location_name}</span>}
+      {cfg.location_name && <span style={{ color: 'var(--color-text-muted)' }}>· {cfg.location_name}</span>}
     </div>
   )
 }
@@ -125,15 +125,15 @@ function ResourcesWidget() {
 
   const Bar = ({ label, used, total, unit, percent, valueLabel }) => (
     <div style={{ width: 180 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569', marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>
         <span>{label}</span>
         <span>{valueLabel ?? `${used}${unit} / ${total}${unit}`}</span>
       </div>
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }}>
+      <div style={{ height: 3, background: 'var(--color-overlay-lg)', borderRadius: 2 }}>
         <div style={{
           height: '100%', borderRadius: 2, transition: 'width 0.4s',
           width: `${Math.min(percent, 100)}%`,
-          background: percent > 90 ? '#F87171' : percent > 70 ? '#F59E0B' : '#4ADE80',
+          background: percent > 90 ? 'var(--color-red)' : percent > 70 ? 'var(--color-yellow)' : 'var(--color-green)',
         }} />
       </div>
     </div>
@@ -175,7 +175,7 @@ function WidgetBar({ config, settings }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
       {settings?.show_greeting && settings?.greeting && (
-        <div style={{ fontSize: 13, color: '#475569' }}>{settings.greeting}</div>
+        <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{settings.greeting}</div>
       )}
       {widgets.map((widget, i) => {
         switch (widget.type) {
@@ -216,29 +216,29 @@ function SearchBar({ config }) {
 
   return (
     <div style={{ position: 'relative', width: 360 }}>
-      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#475569' }}>🔍</span>
+      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}>🔍</span>
       <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={handleKey}
         placeholder="Search or enter URL..."
         style={{
           width: '100%', padding: '10px 16px 10px 40px',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 12, color: '#F1F5F9', fontSize: 14, outline: 'none', fontFamily: 'inherit',
+          background: 'var(--color-overlay-md2)', border: '1px solid var(--color-border)',
+          borderRadius: 12, color: 'var(--color-text-bright)', fontSize: 14, outline: 'none', fontFamily: 'inherit',
         }} />
     </div>
   )
 }
 
 function StatusDot({ status }) {
-  const colors = { online: '#4ADE80', warning: '#F59E0B', offline: '#F87171', unknown: '#475569' }
+  const colors = { online: 'var(--color-green)', warning: 'var(--color-yellow)', offline: 'var(--color-red)', unknown: 'var(--color-text-muted)' }
   const c = colors[status] || colors.unknown
   return <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}`, flexShrink: 0 }} />
 }
 
 const STAT_COLORS = {
-  ok:    { bg: 'rgba(74,222,128,0.1)',  color: '#4ADE80' },
-  warn:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B' },
-  error: { bg: 'rgba(248,113,113,0.1)', color: '#F87171' },
-  info:  { bg: 'rgba(255,255,255,0.06)', color: '#64748B' },
+  ok:    { bg: 'var(--color-green-bg)',  color: 'var(--color-green)' },
+  warn:  { bg: 'var(--color-yellow-bg)',  color: 'var(--color-yellow)' },
+  error: { bg: 'var(--color-red-bg)', color: 'var(--color-red)' },
+  info:  { bg: 'var(--color-overlay-md2)', color: 'var(--color-text-dim)' },
 }
 
 function StatPill({ label, value, status }) {
@@ -249,7 +249,7 @@ function StatPill({ label, value, status }) {
       padding: '2px 7px', borderRadius: 5, fontSize: 10,
       background: c.bg, color: c.color,
     }}>
-      <span style={{ color: '#475569' }}>{label}</span>
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
       <span style={{ fontWeight: 500 }}>{value}</span>
     </span>
   )
@@ -284,8 +284,8 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
       <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}
         title={[item.name, item.description].filter(Boolean).join('\n')}>
         <div style={{
-          background: hov ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${hov ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.07)'}`,
+          background: hov ? 'var(--color-overlay-lg2)' : 'var(--color-overlay-sm)',
+          border: `1px solid ${hov ? 'var(--color-accent-border)' : 'var(--color-overlay-md3)'}`,
           borderRadius: 12, padding: compact ? '10px 12px' : '14px 16px',
           display: 'flex', flexDirection: 'column', gap: 8,
           transition: 'all 0.18s ease',
@@ -294,25 +294,25 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
           {/* Main row: icon + name/desc + status dot */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,0.07)',
+              width: 38, height: 38, borderRadius: 10, background: 'var(--color-overlay-md3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
             }}>{renderIcon(item.icon, '🔗', 22)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {item.name}
                 {item.tag && (
-                  <span style={{ fontSize: 10, color: '#64748B', background: 'rgba(255,255,255,0.05)', padding: '1px 6px', borderRadius: 4 }}>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-dim)', background: 'var(--color-overlay-md)', padding: '1px 6px', borderRadius: 4 }}>
                     {item.tag}
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: '#475569', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {item.description}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               {status === 'online' && latency !== null && (
-                <span style={{ fontSize: 10, color: '#334155' }}>{latency}ms</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-ghost)' }}>{latency}ms</span>
               )}
               <StatusDot status={status} />
             </div>
@@ -321,13 +321,13 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
           {item.adapter && (
             <div style={{ paddingLeft: 50 }}>
               {adapterLoading && (
-                <span style={{ fontSize: 10, color: '#334155' }}>loading…</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-ghost)' }}>loading…</span>
               )}
               {!adapterLoading && adapterError && (
                 <div style={{
-                  fontSize: 11, color: '#F87171',
-                  background: 'rgba(248,113,113,0.08)',
-                  border: '1px solid rgba(248,113,113,0.2)',
+                  fontSize: 11, color: 'var(--color-red)',
+                  background: 'var(--color-red-bg-xs)',
+                  border: '1px solid var(--color-red-border)',
                   borderRadius: 6, padding: '4px 8px',
                   display: 'flex', alignItems: 'flex-start', gap: 5,
                 }}>
@@ -350,16 +350,16 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
         <button onClick={(e) => { e.preventDefault(); onEdit(item) }}
           style={{
             position: 'absolute', top: 8, right: 8,
-            background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: 6,
-            color: '#94A3B8', fontSize: 11, padding: '2px 8px', cursor: 'pointer',
+            background: 'var(--color-scrim-md)', border: 'none', borderRadius: 6,
+            color: 'var(--color-text-secondary)', fontSize: 11, padding: '2px 8px', cursor: 'pointer',
           }}>✏️</button>
       )}
       {hov && onDelete && (
         <button onClick={(e) => { e.preventDefault(); onDelete() }}
           style={{
             position: 'absolute', top: 8, right: onEdit ? 46 : 8,
-            background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: 6,
-            color: '#F87171', fontSize: 11, padding: '2px 8px', cursor: 'pointer',
+            background: 'var(--color-scrim-md)', border: 'none', borderRadius: 6,
+            color: 'var(--color-red)', fontSize: 11, padding: '2px 8px', cursor: 'pointer',
           }}>🗑</button>
       )}
     </div>
@@ -374,8 +374,8 @@ function BookmarkCard({ item, onEdit, onDelete }) {
       <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}
         title={[item.name, item.description].filter(Boolean).join('\n')}>
         <div style={{
-          background: hov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: hov ? 'var(--color-overlay-md3)' : 'var(--color-overlay-xs)',
+          border: '1px solid var(--color-overlay-md2)',
           borderRadius: 10, padding: '0 14px',
           display: 'flex', alignItems: 'center', gap: 10,
           height: 52, overflow: 'hidden',
@@ -383,8 +383,8 @@ function BookmarkCard({ item, onEdit, onDelete }) {
         }}>
           {renderIcon(item.icon, '🔖', 18)}
           <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-            {item.description && <div style={{ fontSize: 11, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+            {item.description && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
           </div>
         </div>
       </a>
@@ -392,11 +392,11 @@ function BookmarkCard({ item, onEdit, onDelete }) {
         <div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 4 }}>
           {onEdit && (
             <button onClick={(e) => { e.preventDefault(); onEdit(item) }}
-              style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: 5, color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>✏️</button>
+              style={{ background: 'var(--color-scrim-md)', border: 'none', borderRadius: 5, color: 'var(--color-text-secondary)', fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>✏️</button>
           )}
           {onDelete && (
             <button onClick={(e) => { e.preventDefault(); onDelete() }}
-              style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: 5, color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>🗑️</button>
+              style={{ background: 'var(--color-scrim-md)', border: 'none', borderRadius: 5, color: 'var(--color-text-secondary)', fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>🗑️</button>
           )}
         </div>
       )}
@@ -410,19 +410,19 @@ function BookmarkModal({ bookmark, onSave, onClose }) {
   const [form, setForm] = useState(bookmark || { name: '', url: '', icon: '', description: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 600 }}>{bookmark ? 'Edit Bookmark' : 'New Bookmark'}</h3>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{bookmark ? 'Edit Bookmark' : 'New Bookmark'}</h3>
         {[['name','Name'],['url','URL'],['icon','Icon (emoji)'],['description','Description']].map(([k,l]) => (
           <div key={k}>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>{l}</div>
             <input value={form[k] || ''} onChange={e => set(k, e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
           </div>
         ))}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
         </div>
       </div>
     </div>
@@ -436,19 +436,19 @@ function CategoryModal({ category, section, onSave, onClose }) {
   const [form, setForm] = useState(category ? { category: category.category, icon: category.icon || '' } : defaults)
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 600 }}>{category ? 'Rename Category' : 'New Category'}</h3>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{category ? 'Rename Category' : 'New Category'}</h3>
         {[['category', 'Name'], ['icon', 'Icon (emoji)']].map(([k, l]) => (
           <div key={k}>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>{l}</div>
             <input value={form[k] || ''} onChange={e => set(k, e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+              style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
           </div>
         ))}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-          <button onClick={() => form.category.trim() && onSave(form)} style={{ padding: '8px 20px', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+          <button onClick={() => form.category.trim() && onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
         </div>
       </div>
     </div>
@@ -464,37 +464,37 @@ function SectionModal({ section, onSave, onClose }) {
     type: section?.type || 'services',
   })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const inputStyle = { width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit' }
+  const inputStyle = { width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 600 }}>{section ? 'Edit Tab' : 'New Tab'}</h3>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{section ? 'Edit Tab' : 'New Tab'}</h3>
         <div>
-          <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Label</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Label</div>
           <input value={form.label} onChange={e => set('label', e.target.value)} placeholder="e.g. DevOps" style={inputStyle} />
         </div>
         <div>
-          <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Icon (emoji)</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon (emoji)</div>
           <input value={form.icon} onChange={e => set('icon', e.target.value)} placeholder="e.g. ⚙️" style={inputStyle} />
         </div>
         {!section && (
           <div>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 6 }}>Type</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 6 }}>Type</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {[['services', '🖥️ Services'], ['bookmarks', '🔖 Bookmarks']].map(([v, l]) => (
                 <button key={v} onClick={() => set('type', v)} style={{
                   flex: 1, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                  background: form.type === v ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${form.type === v ? '#6366F1' : 'rgba(255,255,255,0.08)'}`,
-                  color: form.type === v ? '#818CF8' : '#94A3B8',
+                  background: form.type === v ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-sm)',
+                  border: `1px solid ${form.type === v ? 'var(--color-accent)' : 'var(--color-overlay-lg)'}`,
+                  color: form.type === v ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
                 }}>{l}</button>
               ))}
             </div>
           </div>
         )}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-          <button onClick={() => form.label.trim() && onSave(form)} style={{ padding: '8px 20px', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+          <button onClick={() => form.label.trim() && onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
         </div>
       </div>
     </div>
@@ -554,30 +554,30 @@ function IconPicker({ value, onChange }) {
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <button type="button" onClick={() => { setOpen(v => !v); setSearch('') }} title="Browse icons"
-        style={{ padding: '6px 8px', background: open ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${open ? '#6366F1' : 'rgba(255,255,255,0.1)'}`, borderRadius: 7, color: '#818CF8', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        style={{ padding: '6px 8px', background: open ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)', border: `1px solid ${open ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 7, color: 'var(--color-accent-light)', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
         🔍
       </button>
       {open && (
-        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: 10, width: 280, zIndex: 300, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-strong)', borderRadius: 12, padding: 10, width: 280, zIndex: 300, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <input
             autoFocus
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search icons…"
-            style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: '#F1F5F9', fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
+            style={{ padding: '6px 10px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 7, color: 'var(--color-text-bright)', fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
           />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
             {filtered.map(icon => (
               <button key={icon.slug} type="button" title={icon.name} onClick={() => select(icon.url)}
-                style={{ padding: 6, background: value === icon.url ? 'rgba(99,102,241,0.25)' : 'none', border: `1px solid ${value === icon.url ? '#6366F1' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                onMouseEnter={e => { if (value !== icon.url) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                style={{ padding: 6, background: value === icon.url ? 'var(--color-accent-bg-lg)' : 'none', border: `1px solid ${value === icon.url ? 'var(--color-accent)' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onMouseEnter={e => { if (value !== icon.url) e.currentTarget.style.background = 'var(--color-overlay-md2)' }}
                 onMouseLeave={e => { if (value !== icon.url) e.currentTarget.style.background = 'none' }}>
                 <img src={icon.url} alt={icon.name} style={{ width: 24, height: 24, objectFit: 'contain' }}
                   onError={e => { e.target.style.opacity = '0.2' }} />
               </button>
             ))}
           </div>
-          {filtered.length === 0 && <div style={{ fontSize: 11, color: '#475569', textAlign: 'center', padding: 8 }}>No icons found</div>}
+          {filtered.length === 0 && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
         </div>
       )}
     </div>
@@ -612,16 +612,16 @@ function SecretFieldPicker({ token, onSelect }) {
     setOpen(false); setNewMode(false); setNewKey(''); setNewVal('')
   }
 
-  const iStyle = { padding: '5px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: '#F1F5F9', fontSize: 11, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }
+  const iStyle = { padding: '5px 8px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-bright)', fontSize: 11, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }
 
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <button type="button" onClick={toggle} title="Insert secret reference"
-        style={{ padding: '6px 8px', background: open ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${open ? '#6366F1' : 'rgba(255,255,255,0.1)'}`, borderRadius: 7, color: '#818CF8', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        style={{ padding: '6px 8px', background: open ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)', border: `1px solid ${open ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 7, color: 'var(--color-accent-light)', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
         🔑
       </button>
       {open && (
-        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, width: 220, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-strong)', borderRadius: 10, padding: 8, width: 220, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {!newMode ? (
             <>
               {keys.length > 0 && (
@@ -633,31 +633,31 @@ function SecretFieldPicker({ token, onSelect }) {
                   style={{ ...iStyle, marginBottom: 2 }}
                 />
               )}
-              {keys.length === 0 && <div style={{ fontSize: 11, color: '#475569', padding: '4px 6px' }}>No secrets yet</div>}
+              {keys.length === 0 && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', padding: '4px 6px' }}>No secrets yet</div>}
               {keys.filter(k => k.toLowerCase().includes(search.toLowerCase())).map(k => (
                 <button key={k} type="button" onClick={() => { onSelect(`\${secret:${k}}`); setOpen(false) }}
-                  style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#94A3B8', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                  style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: 'var(--color-text-secondary)', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-overlay-md2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                   <code>{k}</code>
                 </button>
               ))}
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
+              <div style={{ height: 1, background: 'var(--color-overlay-md2)', margin: '2px 0' }} />
               <button type="button" onClick={() => setNewMode(true)}
-                style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#6366F1', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}>
+                style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: 'var(--color-accent)', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}>
                 + New secret
               </button>
             </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 10, color: '#64748B', padding: '2px 2px' }}>New secret</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-dim)', padding: '2px 2px' }}>New secret</div>
               <input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="KEY_NAME" style={iStyle} />
               <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder="value" type="password" style={iStyle} />
               <div style={{ display: 'flex', gap: 6 }}>
                 <button type="button" onClick={() => setNewMode(false)}
-                  style={{ flex: 1, padding: '5px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: '#94A3B8', cursor: 'pointer', fontSize: 11 }}>Back</button>
+                  style={{ flex: 1, padding: '5px 0', background: 'var(--color-overlay-md)', border: '1px solid var(--color-overlay-lg)', borderRadius: 6, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 11 }}>Back</button>
                 <button type="button" onClick={saveNew}
-                  style={{ flex: 1, padding: '5px 0', background: '#6366F1', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 11 }}>Save</button>
+                  style={{ flex: 1, padding: '5px 0', background: 'var(--color-accent)', border: 'none', borderRadius: 6, color: 'var(--color-white)', cursor: 'pointer', fontSize: 11 }}>Save</button>
               </div>
             </div>
           )}
@@ -673,34 +673,34 @@ function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
   const setAdapterCfg = (k, v) => setForm(p => ({ ...p, adapter_config: { ...(p.adapter_config || {}), [k]: v } }))
 
   const adapterDef = adapterCatalog[form.adapter || ''] || adapterCatalog[''] || { fields: [] }
-  const inputStyle = { width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const inputStyle = { width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: 440, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 600 }}>{service ? 'Edit Service' : 'New Service'}</h3>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 440, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{service ? 'Edit Service' : 'New Service'}</h3>
 
         {/* Basic fields */}
         {[['name','Name'],['url','URL'],['description','Description'],['tag','Tag (e.g. v1.0)']].map(([k,l]) => (
           <div key={k}>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>{l}</div>
             <input value={form[k] || ''} onChange={e => set(k, e.target.value)} style={inputStyle} />
           </div>
         ))}
         <div>
-          <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Icon <span style={{ color: '#334155' }}>— emoji or image URL</span></div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon <span style={{ color: 'var(--color-text-ghost)' }}>— emoji or image URL</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="🔗 or https://..." />
             <IconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--color-overlay-md3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {renderIcon(form.icon, '🔗', 22)}
             </div>
           </div>
         </div>
 
         {/* Adapter selector */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
-          <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Adapter <span style={{ color: '#334155' }}>— live stats integration</span></div>
+        <div style={{ borderTop: '1px solid var(--color-overlay-md2)', paddingTop: 14 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Adapter <span style={{ color: 'var(--color-text-ghost)' }}>— live stats integration</span></div>
           <select
             value={form.adapter || ''}
             onChange={e => {
@@ -721,9 +721,9 @@ function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
         {/* Adapter config fields */}
         {adapterDef.fields.map(field => (
           <div key={field.key}>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>
               {field.label}
-              {field.hint && <span style={{ color: '#334155', marginLeft: 6 }}>({field.hint})</span>}
+              {field.hint && <span style={{ color: 'var(--color-text-ghost)', marginLeft: 6 }}>({field.hint})</span>}
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input
@@ -734,15 +734,15 @@ function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
               />
               {token && <SecretFieldPicker token={token} onSelect={v => setAdapterCfg(field.key, v)} />}
             </div>
-            <div style={{ fontSize: 10, color: '#334155', marginTop: 3 }}>
-              Use <code style={{ color: '#475569' }}>${'{'}ENV_VAR{'}'}</code> or <code style={{ color: '#475569' }}>${'{'}secret:KEY{'}'}</code>
+            <div style={{ fontSize: 10, color: 'var(--color-text-ghost)', marginTop: 3 }}>
+              Use <code style={{ color: 'var(--color-text-muted)' }}>${'{'}ENV_VAR{'}'}</code> or <code style={{ color: 'var(--color-text-muted)' }}>${'{'}secret:KEY{'}'}</code>
             </div>
           </div>
         ))}
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
         </div>
       </div>
     </div>
@@ -792,32 +792,32 @@ function WidgetsPanel({ config, onSave, onClose }) {
   }
 
   const inputStyle = {
-    width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-    color: '#F1F5F9', fontSize: 12, outline: 'none', boxSizing: 'border-box',
+    width: '100%', padding: '6px 10px', background: 'var(--color-overlay-md)',
+    border: '1px solid var(--color-border)', borderRadius: 6,
+    color: 'var(--color-text-bright)', fontSize: 12, outline: 'none', boxSizing: 'border-box',
   }
 
   return (
     <>
       {/* Backdrop */}
       <div onClick={onClose} style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 90,
+        position: 'fixed', inset: 0, background: 'var(--color-scrim-sm)', zIndex: 90,
       }} />
       {/* Panel */}
       <div style={{
         position: 'fixed', top: 0, right: 0, width: 340, height: '100vh',
-        background: '#0F172A', borderLeft: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--color-bg-surface)', borderLeft: '1px solid var(--color-overlay-lg)',
         zIndex: 100, display: 'flex', flexDirection: 'column',
         animation: 'slideIn 0.22s ease',
       }}>
         <style>{`@keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }`}</style>
 
         {/* Header */}
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--color-overlay-md2)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9' }}>Widgets</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-bright)' }}>Widgets</span>
           <button type="button" onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 18, lineHeight: 1,
+            background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1,
           }}>✕</button>
         </div>
 
@@ -827,22 +827,22 @@ function WidgetsPanel({ config, onSave, onClose }) {
             const w = draft[i]
             return (
               <div key={def.type} style={{
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                background: 'var(--color-overlay-xs)', border: '1px solid var(--color-overlay-md3)',
                 borderRadius: 10, padding: '12px 14px',
               }}>
                 {/* Row: icon + label + toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: def.fields.length && w.enabled ? 12 : 0 }}>
                   <span style={{ fontSize: 18 }}>{def.icon}</span>
-                  <span style={{ flex: 1, fontSize: 13, color: '#CBD5E1', fontWeight: 500 }}>{def.label}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-tertiary)', fontWeight: 500 }}>{def.label}</span>
                   {/* Toggle */}
                   <div onClick={() => toggle(i)} style={{
                     width: 36, height: 20, borderRadius: 10, cursor: 'pointer', position: 'relative',
-                    background: w.enabled ? '#6366F1' : 'rgba(255,255,255,0.1)',
+                    background: w.enabled ? 'var(--color-accent)' : 'var(--color-border)',
                     transition: 'background 0.2s',
                   }}>
                     <div style={{
                       position: 'absolute', top: 3, left: w.enabled ? 18 : 3,
-                      width: 14, height: 14, borderRadius: '50%', background: '#fff',
+                      width: 14, height: 14, borderRadius: '50%', background: 'var(--color-white)',
                       transition: 'left 0.2s',
                     }} />
                   </div>
@@ -853,7 +853,7 @@ function WidgetsPanel({ config, onSave, onClose }) {
                   if (field.showIf && !field.showIf(w.config)) return null
                   return (
                     <div key={field.key} style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>{field.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>{field.label}</div>
                       {field.type === 'select' ? (
                         <select
                           value={w.config?.[field.key] || field.options[0]}
@@ -879,15 +879,15 @@ function WidgetsPanel({ config, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8 }}>
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--color-overlay-md2)', display: 'flex', gap: 8 }}>
           <button type="button" onClick={onClose} style={{
-            flex: 1, padding: '8px 0', background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8,
-            color: '#94A3B8', cursor: 'pointer', fontSize: 13,
+            flex: 1, padding: '8px 0', background: 'var(--color-overlay-md)',
+            border: '1px solid var(--color-overlay-lg)', borderRadius: 8,
+            color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13,
           }}>Cancel</button>
           <button type="button" onClick={save} style={{
-            flex: 2, padding: '8px 0', background: '#6366F1', border: 'none',
-            borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+            flex: 2, padding: '8px 0', background: 'var(--color-accent)', border: 'none',
+            borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500,
           }}>Save</button>
         </div>
       </div>
@@ -954,57 +954,57 @@ function SecretsPanel({ token, onClose }) {
   }
 
   const inputStyle = {
-    padding: '7px 10px', background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7,
-    color: '#F1F5F9', fontSize: 12, outline: 'none', fontFamily: 'inherit',
+    padding: '7px 10px', background: 'var(--color-overlay-md)',
+    border: '1px solid var(--color-border)', borderRadius: 7,
+    color: 'var(--color-text-bright)', fontSize: 12, outline: 'none', fontFamily: 'inherit',
   }
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 90 }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-lg)', zIndex: 90 }} />
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 360,
-        background: '#0F172A', borderLeft: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--color-bg-surface)', borderLeft: '1px solid var(--color-overlay-lg)',
         zIndex: 100, display: 'flex', flexDirection: 'column',
       }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-overlay-md2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ color: '#F1F5F9', fontSize: 14, fontWeight: 600 }}>🔑 Secrets</div>
-            <div style={{ color: '#475569', fontSize: 11, marginTop: 2 }}>Use <code style={{ color: '#818CF8', background: 'rgba(99,102,241,0.1)', padding: '1px 4px', borderRadius: 3 }}>{'${secret:KEY}'}</code> in adapter fields</div>
+            <div style={{ color: 'var(--color-text-bright)', fontSize: 14, fontWeight: 600 }}>🔑 Secrets</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: 11, marginTop: 2 }}>Use <code style={{ color: 'var(--color-accent-light)', background: 'var(--color-accent-bg-xs)', padding: '1px 4px', borderRadius: 3 }}>{'${secret:KEY}'}</code> in adapter fields</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
 
         {/* Key list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {loading ? (
-            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>Loading…</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>Loading…</div>
           ) : keys.length === 0 ? (
-            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>No secrets yet</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>No secrets yet</div>
           ) : keys.map(key => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
-              <code style={{ flex: 1, fontSize: 12, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{key}</code>
-              <span style={{ fontSize: 11, color: '#1E293B', letterSpacing: 2 }}>••••••</span>
-              <button onClick={() => deleteSecret(key)} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}>🗑️</button>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-overlay-xs)', border: '1px solid var(--color-overlay-md2)', borderRadius: 8 }}>
+              <code style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{key}</code>
+              <span style={{ fontSize: 11, color: 'var(--color-bg-subtle)', letterSpacing: 2 }}>••••••</span>
+              <button onClick={() => deleteSecret(key)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}>🗑️</button>
             </div>
           ))}
         </div>
 
         {/* Add secret */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 500 }}>Add / Update Secret</div>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-overlay-md2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', fontWeight: 500 }}>Add / Update Secret</div>
           <input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="KEY_NAME" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
           <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder="value" type="password" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
             onKeyDown={e => e.key === 'Enter' && addSecret()} />
-          <button onClick={addSecret} style={{ padding: '8px 0', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+          <button onClick={addSecret} style={{ padding: '8px 0', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
             Save Secret
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={exportSecrets} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>
+            <button onClick={exportSecrets} style={{ flex: 1, padding: '7px 0', background: 'var(--color-overlay-md)', border: '1px solid var(--color-overlay-lg)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>
               ⬇ Export
             </button>
-            <button onClick={() => importRef.current.click()} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>
+            <button onClick={() => importRef.current.click()} style={{ flex: 1, padding: '7px 0', background: 'var(--color-overlay-md)', border: '1px solid var(--color-overlay-lg)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>
               {importing ? 'Importing…' : '⬆ Import'}
             </button>
             <input ref={importRef} type="file" accept=".yaml,.yml" style={{ display: 'none' }}
@@ -1016,6 +1016,42 @@ function SecretsPanel({ token, onClose }) {
   )
 }
 
+// ─── Theme Toggle ─────────────────────────────────────────────────
+
+const THEME_CYCLE = ['dark', 'light', 'auto']
+const THEME_META = {
+  dark:  { icon: '🌙', label: 'Dark',  next: 'light' },
+  light: { icon: '☀️',  label: 'Light', next: 'auto'  },
+  auto:  { icon: '⬡',  label: 'Auto',  next: 'dark'  },
+}
+
+function ThemeToggle({ theme, onCycle }) {
+  const meta = THEME_META[theme] || THEME_META.dark
+  return (
+    <button
+      type="button"
+      onClick={onCycle}
+      title={`Theme: ${meta.label} — click for ${THEME_META[meta.next].label}`}
+      style={{
+        padding: '6px 10px',
+        background: 'var(--color-overlay-md)',
+        border: '1px solid var(--color-overlay-lg)',
+        borderRadius: 8,
+        color: 'var(--color-text-secondary)',
+        cursor: 'pointer',
+        fontSize: 14,
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+      }}
+    >
+      <span>{meta.icon}</span>
+      <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{meta.label}</span>
+    </button>
+  )
+}
+
 // ─── Config Menu (Export / Import) ───────────────────────────────
 
 function ConfigMenu({ onExport, onImport, onWidgets, onSecrets }) {
@@ -1024,7 +1060,7 @@ function ConfigMenu({ onExport, onImport, onWidgets, onSecrets }) {
 
   const menuBtnStyle = {
     display: 'block', width: '100%', padding: '8px 14px', background: 'none',
-    border: 'none', borderRadius: 6, color: '#CBD5E1', fontSize: 12,
+    border: 'none', borderRadius: 6, color: 'var(--color-text-tertiary)', fontSize: 12,
     textAlign: 'left', cursor: 'pointer',
   }
 
@@ -1034,9 +1070,9 @@ function ConfigMenu({ onExport, onImport, onWidgets, onSecrets }) {
         type="button"
         onClick={() => setOpen(v => !v)}
         style={{
-          padding: '6px 14px', background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8,
-          color: '#94A3B8', cursor: 'pointer', fontSize: 12,
+          padding: '6px 14px', background: 'var(--color-overlay-md)',
+          border: '1px solid var(--color-overlay-lg)', borderRadius: 8,
+          color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12,
         }}>
         ⚙ Config
       </button>
@@ -1045,31 +1081,31 @@ function ConfigMenu({ onExport, onImport, onWidgets, onSecrets }) {
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-            background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
             borderRadius: 10, padding: 4, minWidth: 140, zIndex: 200,
             display: 'flex', flexDirection: 'column', gap: 2,
           }}>
           <button type="button" style={menuBtnStyle}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseEnter={e => e.target.style.background = 'var(--color-overlay-md2)'}
             onMouseLeave={e => e.target.style.background = 'none'}
             onClick={() => { onWidgets(); setOpen(false) }}>
             🧩 Widgets
           </button>
           <button type="button" style={menuBtnStyle}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseEnter={e => e.target.style.background = 'var(--color-overlay-md2)'}
             onMouseLeave={e => e.target.style.background = 'none'}
             onClick={() => { onSecrets(); setOpen(false) }}>
             🔑 Secrets
           </button>
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 8px' }} />
+          <div style={{ height: 1, background: 'var(--color-overlay-md2)', margin: '2px 8px' }} />
           <button type="button" style={menuBtnStyle}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseEnter={e => e.target.style.background = 'var(--color-overlay-md2)'}
             onMouseLeave={e => e.target.style.background = 'none'}
             onClick={() => { onExport(); setOpen(false) }}>
             ⬇ Export
           </button>
           <button type="button" style={menuBtnStyle}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseEnter={e => e.target.style.background = 'var(--color-overlay-md2)'}
             onMouseLeave={e => e.target.style.background = 'none'}
             onClick={() => fileRef.current.click()}>
             ⬆ Import
@@ -1124,9 +1160,9 @@ function TokenGate({ onUnlock, isUnlocked, onLock }) {
         onClick={() => isUnlocked ? lock() : setOpen(v => !v)}
         title={isUnlocked ? 'Lock (click to log out)' : 'Enter token to enable editing'}
         style={{
-          background: isUnlocked ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-          border: `1px solid ${isUnlocked ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: 8, color: isUnlocked ? '#818CF8' : '#475569',
+          background: isUnlocked ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)',
+          border: `1px solid ${isUnlocked ? 'var(--color-accent-border)' : 'var(--color-overlay-lg)'}`,
+          borderRadius: 8, color: isUnlocked ? 'var(--color-accent-light)' : 'var(--color-text-muted)',
           fontSize: 14, padding: '5px 10px', cursor: 'pointer',
         }}>
         {isUnlocked ? '🔓' : '🔒'}
@@ -1137,11 +1173,11 @@ function TokenGate({ onUnlock, isUnlocked, onLock }) {
           onClick={e => e.stopPropagation()}
           style={{
             position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-            background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
             borderRadius: 12, padding: 16, width: 240, zIndex: 200,
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-          <div style={{ fontSize: 11, color: '#64748B' }}>Enter your Hive token</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>Enter your Hive token</div>
           <input
             type="password"
             value={input}
@@ -1149,18 +1185,18 @@ function TokenGate({ onUnlock, isUnlocked, onLock }) {
             autoFocus
             placeholder="token"
             style={{
-              padding: '7px 10px', background: 'rgba(255,255,255,0.05)',
-              border: `1px solid ${err ? '#F87171' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 7, color: '#F1F5F9', fontSize: 13, outline: 'none',
+              padding: '7px 10px', background: 'var(--color-overlay-md)',
+              border: `1px solid ${err ? 'var(--color-red)' : 'var(--color-border)'}`,
+              borderRadius: 7, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none',
             }}
           />
-          {err && <div style={{ fontSize: 11, color: '#F87171' }}>Invalid token</div>}
+          {err && <div style={{ fontSize: 11, color: 'var(--color-red)' }}>Invalid token</div>}
           <button
             type="submit"
             disabled={checking || !input.trim()}
             style={{
-              padding: '7px 0', background: '#6366F1', border: 'none',
-              borderRadius: 7, color: '#fff', fontSize: 13, fontWeight: 500,
+              padding: '7px 0', background: 'var(--color-accent)', border: 'none',
+              borderRadius: 7, color: 'var(--color-white)', fontSize: 13, fontWeight: 500,
               cursor: 'pointer', opacity: checking || !input.trim() ? 0.5 : 1,
             }}>
             {checking ? 'Checking…' : 'Unlock'}
@@ -1211,10 +1247,32 @@ export default function App() {
     catch { return new Set() }
   })
   const [searchQuery, setSearchQuery] = useState('')
+  const [theme, setTheme] = useState(() => localStorage.getItem('hive-theme') || 'dark')
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   )
+
+  // Apply theme to <html> and listen to system preference in auto mode
+  useEffect(() => {
+    const mq = globalThis.matchMedia('(prefers-color-scheme: dark)')
+    const resolve = (t) => {
+      if (t === 'auto') return mq.matches ? 'dark' : 'light'
+      return t
+    }
+    document.documentElement.dataset.theme = resolve(theme)
+    if (theme === 'auto') {
+      const handler = () => { document.documentElement.dataset.theme = resolve('auto') }
+      mq.addEventListener('change', handler)
+      return () => mq.removeEventListener('change', handler)
+    }
+  }, [theme])
+
+  const cycleTheme = () => setTheme(prev => {
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(prev) + 1) % THEME_CYCLE.length]
+    localStorage.setItem('hive-theme', next)
+    return next
+  })
 
   // Re-validate stored token on load
   useEffect(() => {
@@ -1268,15 +1326,15 @@ export default function App() {
   useEffect(() => { if (!loading) setTimeout(() => setVisible(true), 50) }, [loading])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0A0F1E', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontFamily: 'system-ui' }}>
       Loading...
     </div>
   )
 
   if (error) return (
-    <div style={{ minHeight: '100vh', background: '#0A0F1E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#F87171', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: 'var(--color-red)', fontFamily: 'system-ui' }}>
       <div>Failed to load config: {error}</div>
-      <div style={{ fontSize: 13, color: '#475569' }}>Is config-api running? (/api/config)</div>
+      <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Is config-api running? (/api/config)</div>
     </div>
   )
 
@@ -1469,19 +1527,19 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0A0F1E', fontFamily: "'Outfit', 'Segoe UI', sans-serif", color: '#F1F5F9', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', fontFamily: "'Outfit', 'Segoe UI', sans-serif", color: 'var(--color-text-bright)', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .fade { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
         .fade.show { opacity: 1; transform: translateY(0); }
-        input::placeholder { color: #334155; }
+        input::placeholder { color: var(--color-text-ghost); }
         button:hover { opacity: 0.85; }
       `}</style>
 
       {/* BG Orbs */}
-      <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: 600, height: 600, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: 600, height: 600, background: 'radial-gradient(circle, var(--color-accent-bg-xs) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: 500, height: 500, background: 'radial-gradient(circle, var(--color-teal-bg) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       {/* Top-left logo */}
       <div className={`fade ${visible ? 'show' : ''}`} style={{ position: 'fixed', top: 16, left: 20, zIndex: 50 }}>
@@ -1491,7 +1549,7 @@ export default function App() {
             <>
               <label title="Upload logo" style={{
                 position: 'absolute', inset: 0, borderRadius: 12,
-                background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column',
+                background: 'var(--color-scrim-md2)', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: 4,
                 cursor: 'pointer', opacity: 0, transition: 'opacity 0.15s',
               }}
@@ -1499,15 +1557,15 @@ export default function App() {
                 onMouseLeave={e => e.currentTarget.style.opacity = 0}
               >
                 <span style={{ fontSize: 22 }}>🖼️</span>
-                <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>Change</span>
+                <span style={{ fontSize: 10, color: 'var(--color-white)', fontWeight: 600 }}>Change</span>
                 <input type="file" accept="image/*" style={{ display: 'none' }}
                   onChange={e => handleLogoUpload(e.target.files[0])} />
               </label>
               <button title="Reset to default" onClick={handleLogoDelete} style={{
                 position: 'absolute', top: -6, right: -6,
                 width: 20, height: 20, borderRadius: '50%',
-                background: '#475569', border: 'none',
-                color: '#fff', fontSize: 11, cursor: 'pointer',
+                background: 'var(--color-text-muted)', border: 'none',
+                color: 'var(--color-white)', fontSize: 11, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>↺</button>
             </>
@@ -1517,6 +1575,7 @@ export default function App() {
 
       {/* Top-right controls */}
       <div className={`fade ${visible ? 'show' : ''}`} style={{ position: 'fixed', top: 20, right: 24, display: 'flex', alignItems: 'center', gap: 8, zIndex: 50 }}>
+        <ThemeToggle theme={theme} onCycle={cycleTheme} />
         {isUnlocked && (
           <ConfigMenu onExport={authBackup} onImport={authImport} onWidgets={() => setWidgetsPanelOpen(true)} onSecrets={() => setSecretsPanelOpen(true)} />
         )}
@@ -1532,7 +1591,7 @@ export default function App() {
 
         {/* Tab bar */}
         <div className={`fade ${visible ? 'show' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', marginBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.06)', transitionDelay: '60ms', gap: 4 }}>
+          style={{ display: 'flex', alignItems: 'center', marginBottom: 28, borderBottom: '1px solid var(--color-overlay-md2)', transitionDelay: '60ms', gap: 4 }}>
           {/* Scrollable tabs with DnD */}
           <DndContext sensors={sensors} collisionDetection={closestCenter}
             onDragEnd={({ active, over }) => over && handleReorderTabs(active.id, over.id)}>
@@ -1547,30 +1606,30 @@ export default function App() {
                         <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, opacity: isDragging ? 0.4 : 1 }}>
                           {isUnlocked && (
                             <span {...dragListeners} {...dragAttrs}
-                              style={{ cursor: 'grab', color: '#1E293B', fontSize: 11, padding: '0 2px', lineHeight: 1, userSelect: 'none' }}>⠿</span>
+                              style={{ cursor: 'grab', color: 'var(--color-bg-subtle)', fontSize: 11, padding: '0 2px', lineHeight: 1, userSelect: 'none' }}>⠿</span>
                           )}
                           <button onClick={() => { setActiveTab(tab.key); setSearchQuery('') }} style={{
                             padding: '8px 10px', background: 'none', border: 'none',
-                            borderBottom: `2px solid ${isActive ? '#6366F1' : 'transparent'}`,
+                            borderBottom: `2px solid ${isActive ? 'var(--color-accent)' : 'transparent'}`,
                             cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                            color: isActive ? '#E2E8F0' : '#475569',
+                            color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                             display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s', whiteSpace: 'nowrap',
                           }}>
                             {tab.icon && <span style={{ fontSize: 13 }}>{tab.icon}</span>}
                             {tab.label}
                             <span style={{
                               fontSize: 10, padding: '1px 5px', borderRadius: 8,
-                              background: isActive ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
-                              color: isActive ? '#818CF8' : '#334155',
+                              background: isActive ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)',
+                              color: isActive ? 'var(--color-accent-light)' : 'var(--color-text-ghost)',
                             }}>{count}</span>
                           </button>
                           {isUnlocked && (
                             <div style={{ display: 'flex', gap: 1, paddingRight: 4 }}>
                               <button title="Edit tab" onClick={() => setEditModal({ type: 'section', sectionIdx: ti, section: tab })}
-                                style={{ fontSize: 10, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}>✏️</button>
+                                style={{ fontSize: 10, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}>✏️</button>
                               {tabs.length > 1 && (
                                 <button title="Delete tab" onClick={() => handleDeleteSection(ti)}
-                                  style={{ fontSize: 10, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}>🗑️</button>
+                                  style={{ fontSize: 10, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', lineHeight: 1 }}>🗑️</button>
                               )}
                             </div>
                           )}
@@ -1581,7 +1640,7 @@ export default function App() {
                 })}
                 {isUnlocked && (
                   <button onClick={() => setEditModal({ type: 'section' })}
-                    style={{ padding: '8px 10px', background: 'none', border: 'none', borderBottom: '2px solid transparent', marginBottom: -1, cursor: 'pointer', fontSize: 11, color: '#334155', whiteSpace: 'nowrap' }}>
+                    style={{ padding: '8px 10px', background: 'none', border: 'none', borderBottom: '2px solid transparent', marginBottom: -1, cursor: 'pointer', fontSize: 11, color: 'var(--color-text-ghost)', whiteSpace: 'nowrap' }}>
                     + Tab
                   </button>
                 )}
@@ -1590,10 +1649,10 @@ export default function App() {
           </DndContext>
           {/* Filter + Category */}
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Filter…"
-            style={{ padding: '5px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: '#E2E8F0', fontSize: 12, outline: 'none', width: 150, flexShrink: 0 }} />
+            style={{ padding: '5px 10px', background: 'var(--color-overlay-sm)', border: '1px solid var(--color-overlay-lg)', borderRadius: 6, color: 'var(--color-text-primary)', fontSize: 12, outline: 'none', width: 150, flexShrink: 0 }} />
           {isUnlocked && (
             <button onClick={() => setEditModal({ type: 'category', section: activeTab })}
-              style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', flexShrink: 0 }}>
+              style={{ fontSize: 11, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', flexShrink: 0 }}>
               + Category
             </button>
           )}
@@ -1644,10 +1703,10 @@ export default function App() {
                           <div key={origIdx} style={sType === 'bookmarks' ? { marginBottom: 24 } : {}}>
                             <div onClick={() => toggleCollapse(key)}
                               style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}>
-                              <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>▼</span>
+                              <span style={{ fontSize: 8, color: 'var(--color-text-ghost)', width: 10, flexShrink: 0 }}>▼</span>
                               <span>{group.icon}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
-                              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                              <div style={{ flex: 1, height: 1, background: 'var(--color-overlay-sm)' }} />
                             </div>
                             {renderItems(group, origIdx)}
                           </div>
@@ -1655,7 +1714,7 @@ export default function App() {
                       })}
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>{noMatchLabel}</div>
+                    <div style={{ textAlign: 'center', color: 'var(--color-text-ghost)', fontSize: 13, padding: '48px 0' }}>{noMatchLabel}</div>
                   )
                 ) : (
                   <DndContext sensors={sensors} collisionDetection={closestCenter}
@@ -1673,19 +1732,19 @@ export default function App() {
                                   <div onClick={() => toggleCollapse(key)}
                                     style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: 'pointer', userSelect: 'none' }}>
                                     <span {...dragListeners} {...dragAttrs} onClick={e => e.stopPropagation()}
-                                      style={{ cursor: 'grab', color: '#1E293B', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1 }}>⠿</span>
-                                    <span style={{ fontSize: 8, color: '#334155', width: 10, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
+                                      style={{ cursor: 'grab', color: 'var(--color-bg-subtle)', fontSize: 13, padding: '0 2px', flexShrink: 0, lineHeight: 1 }}>⠿</span>
+                                    <span style={{ fontSize: 8, color: 'var(--color-text-ghost)', width: 10, flexShrink: 0 }}>{isCollapsed ? '▶' : '▼'}</span>
                                     <span>{group.icon}</span>
-                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
-                                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{group.category}</span>
+                                    <div style={{ flex: 1, height: 1, background: 'var(--color-overlay-sm)' }} />
                                     {isUnlocked && (
                                       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 2 }}>
                                         <button onClick={() => setEditModal({ type: 'category', section: sKey, categoryIdx: origIdx, category: group })}
-                                          style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
+                                          style={{ fontSize: 11, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>✏️</button>
                                         <button onClick={() => handleDeleteCategory(sKey, origIdx)}
-                                          style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
+                                          style={{ fontSize: 11, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}>🗑️</button>
                                         <button onClick={() => setEditModal({ type: itemModalType, section: sKey, categoryIdx: origIdx })}
-                                          style={{ fontSize: 11, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
+                                          style={{ fontSize: 11, color: 'var(--color-text-ghost)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}>+ Add</button>
                                       </div>
                                     )}
                                   </div>
@@ -1700,17 +1759,17 @@ export default function App() {
                   </DndContext>
                 )
               ) : (
-                <div style={{ textAlign: 'center', color: '#334155', fontSize: 13, padding: '48px 0' }}>{emptyLabel}</div>
+                <div style={{ textAlign: 'center', color: 'var(--color-text-ghost)', fontSize: 13, padding: '48px 0' }}>{emptyLabel}</div>
               )}
             </div>
           )
         })()}
 
         {/* Footer */}
-        <div style={{ marginTop: 52, textAlign: 'center', fontSize: 11, color: '#1E293B', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+        <div style={{ marginTop: 52, textAlign: 'center', fontSize: 11, color: 'var(--color-bg-subtle)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
           <span>{settings.title || 'hive'} · {saving ? 'saving...' : 'ready'}</span>
           {appVersion && (
-            <span style={{ padding: '1px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: '#334155', fontSize: 10 }}>
+            <span style={{ padding: '1px 6px', borderRadius: 4, background: 'var(--color-overlay-sm)', color: 'var(--color-text-ghost)', fontSize: 10 }}>
               {appVersion}
             </span>
           )}
