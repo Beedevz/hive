@@ -541,6 +541,7 @@ const ADAPTER_DEFS = {
 function SecretFieldPicker({ token, onSelect }) {
   const [open, setOpen] = useState(false)
   const [keys, setKeys] = useState([])
+  const [search, setSearch] = useState('')
   const [newMode, setNewMode] = useState(false)
   const [newKey, setNewKey] = useState('')
   const [newVal, setNewVal] = useState('')
@@ -550,7 +551,7 @@ function SecretFieldPicker({ token, onSelect }) {
     if (res.ok) { const d = await res.json(); setKeys((d.keys || []).sort()) }
   }
 
-  const toggle = () => { if (!open) load(); setOpen(v => !v); setNewMode(false) }
+  const toggle = () => { if (!open) load(); setOpen(v => !v); setNewMode(false); setSearch('') }
 
   const saveNew = async () => {
     if (!newKey.trim() || !newVal.trim()) return
@@ -575,8 +576,17 @@ function SecretFieldPicker({ token, onSelect }) {
         <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, width: 220, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {!newMode ? (
             <>
+              {keys.length > 0 && (
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search secrets…"
+                  style={{ ...iStyle, marginBottom: 2 }}
+                />
+              )}
               {keys.length === 0 && <div style={{ fontSize: 11, color: '#475569', padding: '4px 6px' }}>No secrets yet</div>}
-              {keys.map(k => (
+              {keys.filter(k => k.toLowerCase().includes(search.toLowerCase())).map(k => (
                 <button key={k} type="button" onClick={() => { onSelect(`\${secret:${k}}`); setOpen(false) }}
                   style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#94A3B8', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
