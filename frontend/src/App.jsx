@@ -54,28 +54,56 @@ function WeatherWidget({ widget }) {
     const fetchWeather = async (lat, lon) => {
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current=temperature_2m,weathercode,windspeed_10m` +
+          `&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
         )
         const data = await res.json()
-        setWeather(data.current_weather)
+        setWeather(data)
       } catch {}
     }
-    if (cfg.lat != null && cfg.lon != null) {
-      fetchWeather(cfg.lat, cfg.lon)
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => {}
-      )
-    }
-  }, [])
 
-  if (!weather) return null
+    const resolveAndFetch = async () => {
+      const name = cfg.location_name?.trim()
+      if (name) {
+        try {
+          const geo = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`
+          )
+          const geoData = await geo.json()
+          const loc = geoData.results?.[0]
+          if (loc) { fetchWeather(loc.latitude, loc.longitude); return }
+        } catch {}
+      }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+          () => {}
+        )
+      }
+    }
+
+    resolveAndFetch()
+  }, [cfg.location_name])
+
+  if (!weather?.current) return null
+  const cur = weather.current
+  const daily = weather.daily
+  const tMax = daily?.temperature_2m_max?.[0]
+  const tMin = daily?.temperature_2m_min?.[0]
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
-      <span style={{ fontSize: 20 }}>{WMO_ICONS[weather.weathercode] || '🌡️'}</span>
-      <span>{Math.round(weather.temperature)}°C</span>
-      {cfg.location_name && <span style={{ color: '#334155' }}>· {cfg.location_name}</span>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#64748B' }}>
+      <span style={{ fontSize: 20 }}>{WMO_ICONS[cur.weathercode] || '🌡️'}</span>
+      <span style={{ color: '#94A3B8', fontWeight: 500 }}>{Math.round(cur.temperature_2m)}°C</span>
+      {tMax != null && tMin != null && (
+        <span style={{ fontSize: 11 }}>
+          <span style={{ color: '#F87171' }}>↑{Math.round(tMax)}°</span>
+          {' '}
+          <span style={{ color: '#60A5FA' }}>↓{Math.round(tMin)}°</span>
+        </span>
+      )}
+      {cfg.location_name && <span style={{ color: '#475569' }}>· {cfg.location_name}</span>}
     </div>
   )
 }
@@ -620,6 +648,7 @@ function IconPicker({ value, onChange }) {
 function SecretFieldPicker({ token, onSelect }) {
   const [open, setOpen] = useState(false)
   const [keys, setKeys] = useState([])
+  const [search, setSearch] = useState('')
   const [newMode, setNewMode] = useState(false)
   const [newKey, setNewKey] = useState('')
   const [newVal, setNewVal] = useState('')
@@ -629,7 +658,7 @@ function SecretFieldPicker({ token, onSelect }) {
     if (res.ok) { const d = await res.json(); setKeys((d.keys || []).sort()) }
   }
 
-  const toggle = () => { if (!open) load(); setOpen(v => !v); setNewMode(false) }
+  const toggle = () => { if (!open) load(); setOpen(v => !v); setNewMode(false); setSearch('') }
 
   const saveNew = async () => {
     if (!newKey.trim() || !newVal.trim()) return
@@ -654,8 +683,17 @@ function SecretFieldPicker({ token, onSelect }) {
         <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, width: 220, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {!newMode ? (
             <>
+              {keys.length > 0 && (
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search secrets…"
+                  style={{ ...iStyle, marginBottom: 2 }}
+                />
+              )}
               {keys.length === 0 && <div style={{ fontSize: 11, color: '#475569', padding: '4px 6px' }}>No secrets yet</div>}
-              {keys.map(k => (
+              {keys.filter(k => k.toLowerCase().includes(search.toLowerCase())).map(k => (
                 <button key={k} type="button" onClick={() => { onSelect(`\${secret:${k}}`); setOpen(false) }}
                   style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#94A3B8', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
@@ -688,12 +726,12 @@ function SecretFieldPicker({ token, onSelect }) {
   )
 }
 
-function ServiceModal({ service, onSave, onClose, token }) {
+function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
   const [form, setForm] = useState(service || { name: '', url: '', icon: '', description: '', tag: '', adapter: '', adapter_config: {} })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const setAdapterCfg = (k, v) => setForm(p => ({ ...p, adapter_config: { ...(p.adapter_config || {}), [k]: v } }))
 
-  const adapterDef = ADAPTER_DEFS[form.adapter || ''] || ADAPTER_DEFS['']
+  const adapterDef = adapterCatalog[form.adapter || ''] || adapterCatalog[''] || { fields: [] }
   const inputStyle = { width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
 
   return (
@@ -725,15 +763,15 @@ function ServiceModal({ service, onSave, onClose, token }) {
           <select
             value={form.adapter || ''}
             onChange={e => {
-              const def = ADAPTER_DEFS[e.target.value] || ADAPTER_DEFS['']
-              const adapterIcons = new Set(Object.values(ADAPTER_DEFS).map(d => d.icon).filter(Boolean))
+              const def = adapterCatalog[e.target.value] || adapterCatalog[''] || {}
+              const adapterIcons = new Set(Object.values(adapterCatalog).map(d => d.icon).filter(Boolean))
               setForm(p => {
                 const isAutoIcon = !p.icon || adapterIcons.has(p.icon)
                 return { ...p, adapter: e.target.value, icon: isAutoIcon ? (def.icon || '') : p.icon }
               })
             }}
             style={{ ...inputStyle, appearance: 'none' }}>
-            {Object.entries(ADAPTER_DEFS).map(([k, v]) => (
+            {Object.entries(adapterCatalog).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
@@ -782,9 +820,7 @@ const WIDGET_DEFS = [
   ]},
   { type: 'resources', label: 'Resources', icon: '📊', fields: [] },
   { type: 'weather',   label: 'Weather',   icon: '🌤️', fields: [
-    { key: 'lat',           label: 'Latitude',      type: 'number', placeholder: '41.01' },
-    { key: 'lon',           label: 'Longitude',     type: 'number', placeholder: '28.98' },
-    { key: 'location_name', label: 'Location name', type: 'text',   placeholder: 'Istanbul' },
+    { key: 'location_name', label: 'City / Location', type: 'text', placeholder: 'Istanbul  (leave empty to auto-detect)' },
   ]},
 ]
 
@@ -1227,6 +1263,7 @@ export default function App() {
   const [secretsPanelOpen, setSecretsPanelOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [logoVer, setLogoVer] = useState(Date.now())
+  const [adapterCatalog, setAdapterCatalog] = useState({})
   const [activeTab, setActiveTab] = useState('services')
   const [collapsedCategories, setCollapsedCategories] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('hive_collapsed') || '[]')) }
@@ -1247,6 +1284,17 @@ export default function App() {
 
   useEffect(() => {
     fetch('/api/version').then(r => r.json()).then(d => setAppVersion(d.version || '')).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/adapters-catalog')
+      .then(r => r.json())
+      .then(list => {
+        const map = {}
+        list.forEach(d => { map[d.key] = d })
+        setAdapterCatalog(map)
+      })
+      .catch(() => {})
   }, [])
 
   const handleUnlock = async (t) => {
@@ -1754,6 +1802,7 @@ export default function App() {
         <ServiceModal
           service={editModal.item}
           token={token}
+          adapterCatalog={adapterCatalog}
           onSave={handleSaveService}
           onClose={() => setEditModal(null)} />
       )}
