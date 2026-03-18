@@ -536,6 +536,85 @@ const ADAPTER_DEFS = {
   tailscale:        { label: 'Tailscale',           icon: SI+'tailscale.svg',                   fields: [{ key: 'apikey', label: 'API Key', placeholder: '${TS_APIKEY}' }, { key: 'tailnet', label: 'Tailnet', placeholder: '${TS_TAILNET}' }] },
 }
 
+// ─── Icon Picker ──────────────────────────────────────────────────
+
+const ICON_LIST = [
+  // Monitoring & Uptime
+  ['adguard-home','AdGuard'],['pi-hole','Pi-hole'],['grafana','Grafana'],['netdata','Netdata'],
+  ['uptime-kuma','Uptime Kuma'],['prometheus','Prometheus'],['alertmanager','Alertmanager'],
+  // Infrastructure
+  ['proxmox','Proxmox'],['portainer','Portainer'],['traefik','Traefik'],
+  ['nginx-proxy-manager','NPM'],['nginx','NGINX'],['caddy','Caddy'],
+  ['docker','Docker'],['kubernetes','Kubernetes'],['ansible','Ansible'],['terraform','Terraform'],
+  // Media
+  ['jellyfin','Jellyfin'],['plex','Plex'],['emby','Emby'],['kodi','Kodi'],
+  ['sonarr','Sonarr'],['radarr','Radarr'],['lidarr','Lidarr'],['readarr','Readarr'],
+  ['prowlarr','Prowlarr'],['bazarr','Bazarr'],['overseerr','Overseerr'],['jellyseerr','Jellyseerr'],
+  // Downloads
+  ['qbittorrent','qBittorrent'],['transmission','Transmission'],['deluge','Deluge'],
+  ['sabnzbd','SABnzbd'],['nzbget','NZBGet'],
+  // Services
+  ['nextcloud','Nextcloud'],['immich','Immich'],['vaultwarden','Vaultwarden'],
+  ['home-assistant','Home Assistant'],['homebridge','Homebridge'],
+  ['paperless-ngx','Paperless'],['firefly-iii','Firefly III'],
+  ['freshrss','FreshRSS'],['miniflux','Miniflux'],['wallabag','Wallabag'],
+  // Storage & NAS
+  ['truenas','TrueNAS'],['synology','Synology'],['western-digital','WD'],['minio','MinIO'],
+  // Dev & Tools
+  ['gitlab','GitLab'],['gitea','Gitea'],['forgejo','Forgejo'],['github','GitHub'],
+  ['jenkins','Jenkins'],['drone','Drone'],
+  // Network
+  ['cloudflare','Cloudflare'],['tailscale','Tailscale'],['wireguard','WireGuard'],
+  ['opnsense','OPNsense'],['pfsense','pfSense'],['ubiquiti','UniFi'],
+  // System
+  ['glances','Glances'],['scrutiny','Scrutiny'],['frigate','Frigate'],['watchtower','Watchtower'],
+  ['speedtest-tracker','Speedtest'],
+].map(([slug, name]) => ({ slug, name, url: SI + slug + '.svg' }))
+
+function IconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filtered = ICON_LIST.filter(i =>
+    i.name.toLowerCase().includes(search.toLowerCase()) ||
+    i.slug.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const select = (url) => { onChange(url); setOpen(false); setSearch('') }
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" onClick={() => { setOpen(v => !v); setSearch('') }} title="Browse icons"
+        style={{ padding: '6px 8px', background: open ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${open ? '#6366F1' : 'rgba(255,255,255,0.1)'}`, borderRadius: 7, color: '#818CF8', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        🔍
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: 10, width: 280, zIndex: 300, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input
+            autoFocus
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search icons…"
+            style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: '#F1F5F9', fontSize: 12, outline: 'none', fontFamily: 'inherit' }}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+            {filtered.map(icon => (
+              <button key={icon.slug} type="button" title={icon.name} onClick={() => select(icon.url)}
+                style={{ padding: 6, background: value === icon.url ? 'rgba(99,102,241,0.25)' : 'none', border: `1px solid ${value === icon.url ? '#6366F1' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onMouseEnter={e => { if (value !== icon.url) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                onMouseLeave={e => { if (value !== icon.url) e.currentTarget.style.background = 'none' }}>
+                <img src={icon.url} alt={icon.name} style={{ width: 24, height: 24, objectFit: 'contain' }}
+                  onError={e => { e.target.style.opacity = '0.2' }} />
+              </button>
+            ))}
+          </div>
+          {filtered.length === 0 && <div style={{ fontSize: 11, color: '#475569', textAlign: 'center', padding: 8 }}>No icons found</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Secret Field Picker ──────────────────────────────────────────
 
 function SecretFieldPicker({ token, onSelect }) {
@@ -633,6 +712,7 @@ function ServiceModal({ service, onSave, onClose, token }) {
           <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Icon <span style={{ color: '#334155' }}>— emoji or image URL</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="🔗 or https://..." />
+            <IconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
             <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {renderIcon(form.icon, '🔗', 22)}
             </div>
