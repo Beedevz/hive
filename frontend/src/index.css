@@ -1,47 +1,155 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── Theme variables ───────────────────────────────────────────── */
 
 :root {
-  --bg:        #0A0F1E;
-  --bg-card:   rgba(255,255,255,0.04);
-  --bg-hover:  rgba(255,255,255,0.08);
-  --border:    rgba(255,255,255,0.07);
-  --border-focus: rgba(99,102,241,0.5);
-  --text:      #E2E8F0;
-  --text-muted: #475569;
-  --text-dim:  #64748B;
-  --accent:    #6366F1;
-  --green:     #4ADE80;
-  --yellow:    #F59E0B;
-  --red:       #F87171;
-  --font:      'Outfit', 'Segoe UI', sans-serif;
-  --mono:      'JetBrains Mono', monospace;
+  /* Solid colors — dark default */
+  --color-bg-page:             #0A0F1E;
+  --color-bg-surface:          #0F172A;
+  --color-bg-subtle:           #1E293B;
+  --color-text-ghost:          #334155;
+  --color-text-muted:          #475569;
+  --color-text-dim:            #64748B;
+  --color-text-secondary:      #94A3B8;
+  --color-text-tertiary:       #CBD5E1;
+  --color-text-primary:        #E2E8F0;
+  --color-text-bright:         #F1F5F9;
+  --color-accent-light:        #818CF8;
+  --color-accent:              #6366F1;
+  --color-green:               #4ADE80;
+  --color-yellow:              #F59E0B;
+  --color-red:                 #F87171;
+  --color-blue:                #60A5FA;
+  --color-white:               #ffffff;
+
+  /* White overlays (cards, borders, subtle bg) */
+  --color-overlay-xs:          rgba(255,255,255,0.03);
+  --color-overlay-sm:          rgba(255,255,255,0.04);
+  --color-overlay-md:          rgba(255,255,255,0.05);
+  --color-overlay-md2:         rgba(255,255,255,0.06);
+  --color-overlay-md3:         rgba(255,255,255,0.07);
+  --color-overlay-lg:          rgba(255,255,255,0.08);
+  --color-overlay-lg2:         rgba(255,255,255,0.09);
+  --color-border:              rgba(255,255,255,0.10);
+  --color-border-strong:       rgba(255,255,255,0.12);
+
+  /* Modal / scrim backdrops */
+  --color-scrim-sm:            rgba(0,0,0,0.40);
+  --color-scrim-md:            rgba(0,0,0,0.50);
+  --color-scrim-md2:           rgba(0,0,0,0.55);
+  --color-scrim-lg:            rgba(0,0,0,0.60);
+  --color-scrim-xl:            rgba(0,0,0,0.70);
+
+  /* Accent (indigo) tinted backgrounds */
+  --color-accent-bg-xs:        rgba(99,102,241,0.10);
+  --color-accent-bg-sm:        rgba(99,102,241,0.15);
+  --color-accent-bg-md:        rgba(99,102,241,0.20);
+  --color-accent-bg-lg:        rgba(99,102,241,0.25);
+  --color-accent-border:       rgba(99,102,241,0.40);
+  --color-accent-border-focus: rgba(99,102,241,0.50);
+
+  /* Status tinted backgrounds */
+  --color-green-bg:            rgba(74,222,128,0.10);
+  --color-yellow-bg:           rgba(245,158,11,0.10);
+  --color-red-bg-xs:           rgba(248,113,113,0.08);
+  --color-red-bg:              rgba(248,113,113,0.10);
+  --color-red-border:          rgba(248,113,113,0.20);
+  --color-teal-bg:             rgba(16,185,129,0.07);
+
+  --font: 'Outfit', 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+[data-theme="light"] {
+  /* Solid colors — light */
+  --color-bg-page:             #F1F5F9;
+  --color-bg-surface:          #FFFFFF;
+  --color-bg-subtle:           #E2E8F0;
+  --color-text-ghost:          #94A3B8;
+  --color-text-muted:          #64748B;
+  --color-text-dim:            #475569;
+  --color-text-secondary:      #334155;
+  --color-text-tertiary:       #1E293B;
+  --color-text-primary:        #0F172A;
+  --color-text-bright:         #0A0F1E;
+  --color-accent-light:        #4F46E5;
+  --color-accent:              #4F46E5;
+  --color-green:               #16A34A;
+  --color-yellow:              #D97706;
+  --color-red:                 #DC2626;
+  --color-blue:                #2563EB;
+  --color-white:               #ffffff;
+
+  /* In light mode cards need solid white to stand out on the gray page */
+  --color-overlay-xs:          rgba(255,255,255,0.60);
+  --color-overlay-sm:          #ffffff;               /* card background */
+  --color-overlay-md:          rgba(255,255,255,0.90);
+  --color-overlay-md2:         rgba(0,0,0,0.05);      /* separator / tag bg */
+  --color-overlay-md3:         rgba(0,0,0,0.07);      /* icon container */
+  --color-overlay-lg:          rgba(0,0,0,0.06);      /* input backgrounds */
+  --color-overlay-lg2:         rgba(0,0,0,0.04);      /* card hover */
+  --color-border:              rgba(0,0,0,0.12);
+  --color-border-strong:       rgba(0,0,0,0.18);
+
+  /* Scrims slightly reduced in light mode */
+  --color-scrim-sm:            rgba(0,0,0,0.25);
+  --color-scrim-md:            rgba(0,0,0,0.35);
+  --color-scrim-md2:           rgba(0,0,0,0.40);
+  --color-scrim-lg:            rgba(0,0,0,0.45);
+  --color-scrim-xl:            rgba(0,0,0,0.55);
+
+  /* Accent tinted */
+  --color-accent-bg-xs:        rgba(79,70,229,0.10);
+  --color-accent-bg-sm:        rgba(79,70,229,0.12);
+  --color-accent-bg-md:        rgba(79,70,229,0.15);
+  --color-accent-bg-lg:        rgba(79,70,229,0.20);
+  --color-accent-border:       rgba(79,70,229,0.50);
+  --color-accent-border-focus: rgba(79,70,229,0.70);
+
+  /* Status tinted */
+  --color-green-bg:            rgba(22,163,74,0.12);
+  --color-yellow-bg:           rgba(217,119,6,0.12);
+  --color-red-bg-xs:           rgba(220,38,38,0.08);
+  --color-red-bg:              rgba(220,38,38,0.10);
+  --color-red-border:          rgba(220,38,38,0.25);
+  --color-teal-bg:             rgba(5,150,105,0.08);
+}
+
+/* ─── Reset + smooth theme transition ───────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transition:
+    background-color 0.25s ease,
+    border-color     0.25s ease,
+    color            0.25s ease,
+    box-shadow       0.25s ease;
 }
 
 html, body, #root {
   min-height: 100vh;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
   font-family: var(--font);
 }
 
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 input, textarea, select {
   font-family: var(--font);
-  color: var(--text);
+  color: var(--color-text-primary);
   background: transparent;
 }
 
 a { color: inherit; text-decoration: none; }
 
-.fade-up {
+.fade {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
+  transform: translateY(12px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
-.fade-up.show {
+.fade.show {
   opacity: 1;
   transform: translateY(0);
 }
