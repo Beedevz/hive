@@ -28,10 +28,11 @@ jobs:
 
       - name: Stamp Chart.yaml with release version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"          # strips leading "v"
-          sed -i "s/^version:.*/version: ${VERSION}/"       helm/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" helm/Chart.yaml
-          echo "Chart version set to ${VERSION}"
+          CHART_VERSION="${GITHUB_REF_NAME#v}"    # semver without v  (e.g. 1.5.0)
+          APP_VERSION="${GITHUB_REF_NAME}"         # keeps v prefix to match Docker Hub tag (e.g. v1.5.0)
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/"         helm/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${APP_VERSION}\"/" helm/Chart.yaml
+          echo "Chart version: ${CHART_VERSION}, appVersion: ${APP_VERSION}"
           cat helm/Chart.yaml
 
       - name: Ensure gh-pages branch exists
