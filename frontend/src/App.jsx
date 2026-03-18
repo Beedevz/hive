@@ -1211,7 +1211,7 @@ export default function App() {
     </div>
   )
 
-  const { settings = {}, services = [], bookmarks = [], widgets = [] } = config
+  const { settings = {} } = config
 
   const tabs = config.sections?.length
     ? config.sections
@@ -1220,7 +1220,6 @@ export default function App() {
         { key: 'bookmarks', label: 'Bookmarks', icon: '', type: 'bookmarks' },
       ]
   const activeSection = tabs.find(t => t.key === activeTab) || tabs[0]
-  const activeSectionData = config[activeSection?.key] || []
 
   // ── Handlers ──
   const handleSaveService = async (form) => {
@@ -1295,7 +1294,6 @@ export default function App() {
     await authSave(newConfig)
   }
 
-  const onlineCount = services.flatMap(s => s.items || []).length
 
   const handleLogoUpload = async (file) => {
     if (!file) return
