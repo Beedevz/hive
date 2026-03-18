@@ -630,8 +630,12 @@ func main() {
 				http.Error(w, "Write error: "+err.Error(), 500)
 				return
 			}
-			defer dst.Close()
 			if _, err := io.Copy(dst, file); err != nil {
+				dst.Close()
+				http.Error(w, "Write error: "+err.Error(), 500)
+				return
+			}
+			if err := dst.Close(); err != nil {
 				http.Error(w, "Write error: "+err.Error(), 500)
 				return
 			}
