@@ -46,6 +46,14 @@ func fetchNPMStats(cfg map[string]interface{}, baseURL string) AdapterResult {
 
 	stats := []StatItem{}
 
+	// Version — GET /api/ returns {"version":"2.x.x"} without requiring extra auth.
+	var meta struct {
+		Version string `json:"version"`
+	}
+	if err := do("/api/", &meta); err == nil && meta.Version != "" {
+		stats = append(stats, StatItem{Label: "Version", Value: "v" + meta.Version, Status: "ok"})
+	}
+
 	var hosts []struct {
 		Enabled     bool     `json:"enabled"`
 		DomainNames []string `json:"domain_names"`
