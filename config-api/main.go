@@ -24,6 +24,32 @@ import (
 )
 
 const configDir = "/config"
+const secretsFile = "/config/secrets.yaml"
+
+// loadSecrets reads secrets.yaml and returns a key→value map.
+// Returns an empty map if the file does not exist or cannot be parsed.
+func loadSecrets() map[string]string {
+	data, err := os.ReadFile(secretsFile)
+	if err != nil {
+		return map[string]string{}
+	}
+	var s map[string]string
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return map[string]string{}
+	}
+	if s == nil {
+		return map[string]string{}
+	}
+	return s
+}
+
+func saveSecrets(s map[string]string) error {
+	data, err := yaml.Marshal(s)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(secretsFile, data, 0600)
+}
 
 // version is injected at build time via -ldflags "-X main.version=vX.Y.Z"
 var version = "dev"
@@ -369,7 +395,7 @@ func handleProbeDetails(w http.ResponseWriter, r *http.Request, svc *serviceItem
 		return
 	}
 
-	cfg := adapters.ExpandEnvVars(svc.AdapterConfig)
+	cfg := adapters.ExpandEnvVars(svc.AdapterConfig, loadSecrets())
 	baseURL := svc.URL
 	if u, ok := cfg["api_url"].(string); ok && u != "" {
 		baseURL = u
@@ -625,6 +651,103 @@ func main() {
 		default:
 			http.Error(w, "Method not allowed", 405)
 		}
+	}))
+	mux.HandleFunc("/secrets", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r) {
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			s := loadSecrets()
+			keys := make([]string, 0, len(s))
+			for k := range s {
+				keys = append(keys, k)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"keys": keys})
+
+		case http.MethodPut:
+			var body struct {
+				Key   string `json:"key"`
+				Value string `json:"value"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Key == "" {
+				http.Error(w, "Invalid body: key and value required", 400)
+				return
+			}
+			s := loadSecrets()
+			s[body.Key] = body.Value
+			if err := saveSecrets(s); err != nil {
+				http.Error(w, "Write error: "+err.Error(), 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"status":"ok"}`))
+
+		case http.MethodDelete:
+			key := r.URL.Query().Get("key")
+			if key == "" {
+				http.Error(w, "Missing ?key=", 400)
+				return
+			}
+			s := loadSecrets()
+			delete(s, key)
+			if err := saveSecrets(s); err != nil {
+				http.Error(w, "Write error: "+err.Error(), 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"status":"ok"}`))
+
+		default:
+			http.Error(w, "Method not allowed", 405)
+		}
+	}))
+	mux.HandleFunc("/secrets/backup", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r) {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", 405)
+			return
+		}
+		data, err := os.ReadFile(secretsFile)
+		if err != nil {
+			http.Error(w, "No secrets file found", 404)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-yaml")
+		w.Header().Set("Content-Disposition", "attachment; filename=secrets.yaml")
+		w.Write(data)
+	}))
+	mux.HandleFunc("/secrets/import", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r) {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", 405)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Read error", 400)
+			return
+		}
+		var incoming map[string]string
+		if err := yaml.Unmarshal(body, &incoming); err != nil || incoming == nil {
+			http.Error(w, "Invalid YAML", 400)
+			return
+		}
+		existing := loadSecrets()
+		for k, v := range incoming {
+			existing[k] = v
+		}
+		if err := saveSecrets(existing); err != nil {
+			http.Error(w, "Write error: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
 	}))
 	mux.HandleFunc("/probe/", corsMiddleware(handleProbe))
 	mux.HandleFunc("/system", corsMiddleware(systemStats))

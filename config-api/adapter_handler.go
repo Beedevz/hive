@@ -143,7 +143,7 @@ func handleAdapter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := adapters.ExpandEnvVars(svc.AdapterConfig)
+	cfg := adapters.ExpandEnvVars(svc.AdapterConfig, loadSecrets())
 
 	baseURL := svc.URL
 	if u, ok := cfg["api_url"].(string); ok && u != "" {

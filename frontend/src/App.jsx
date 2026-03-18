@@ -536,7 +536,80 @@ const ADAPTER_DEFS = {
   tailscale:        { label: 'Tailscale',           icon: SI+'tailscale.svg',                   fields: [{ key: 'apikey', label: 'API Key', placeholder: '${TS_APIKEY}' }, { key: 'tailnet', label: 'Tailnet', placeholder: '${TS_TAILNET}' }] },
 }
 
-function ServiceModal({ service, onSave, onClose }) {
+// ─── Secret Field Picker ──────────────────────────────────────────
+
+function SecretFieldPicker({ token, onSelect }) {
+  const [open, setOpen] = useState(false)
+  const [keys, setKeys] = useState([])
+  const [newMode, setNewMode] = useState(false)
+  const [newKey, setNewKey] = useState('')
+  const [newVal, setNewVal] = useState('')
+
+  const load = async () => {
+    const res = await fetch('/api/secrets', { headers: { 'X-Hive-Token': token } })
+    if (res.ok) { const d = await res.json(); setKeys((d.keys || []).sort()) }
+  }
+
+  const toggle = () => { if (!open) load(); setOpen(v => !v); setNewMode(false) }
+
+  const saveNew = async () => {
+    if (!newKey.trim() || !newVal.trim()) return
+    await fetch('/api/secrets', {
+      method: 'PUT',
+      headers: { 'X-Hive-Token': token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: newKey.trim(), value: newVal.trim() }),
+    })
+    onSelect(`\${secret:${newKey.trim()}}`)
+    setOpen(false); setNewMode(false); setNewKey(''); setNewVal('')
+  }
+
+  const iStyle = { padding: '5px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: '#F1F5F9', fontSize: 11, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" onClick={toggle} title="Insert secret reference"
+        style={{ padding: '6px 8px', background: open ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${open ? '#6366F1' : 'rgba(255,255,255,0.1)'}`, borderRadius: 7, color: '#818CF8', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        🔑
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, width: 220, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {!newMode ? (
+            <>
+              {keys.length === 0 && <div style={{ fontSize: 11, color: '#475569', padding: '4px 6px' }}>No secrets yet</div>}
+              {keys.map(k => (
+                <button key={k} type="button" onClick={() => { onSelect(`\${secret:${k}}`); setOpen(false) }}
+                  style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#94A3B8', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <code>{k}</code>
+                </button>
+              ))}
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
+              <button type="button" onClick={() => setNewMode(true)}
+                style={{ padding: '6px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#6366F1', fontSize: 11, textAlign: 'left', cursor: 'pointer' }}>
+                + New secret
+              </button>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, color: '#64748B', padding: '2px 2px' }}>New secret</div>
+              <input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="KEY_NAME" style={iStyle} />
+              <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder="value" type="password" style={iStyle} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button type="button" onClick={() => setNewMode(false)}
+                  style={{ flex: 1, padding: '5px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, color: '#94A3B8', cursor: 'pointer', fontSize: 11 }}>Back</button>
+                <button type="button" onClick={saveNew}
+                  style={{ flex: 1, padding: '5px 0', background: '#6366F1', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 11 }}>Save</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ServiceModal({ service, onSave, onClose, token }) {
   const [form, setForm] = useState(service || { name: '', url: '', icon: '', description: '', tag: '', adapter: '', adapter_config: {} })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const setAdapterCfg = (k, v) => setForm(p => ({ ...p, adapter_config: { ...(p.adapter_config || {}), [k]: v } }))
@@ -593,14 +666,17 @@ function ServiceModal({ service, onSave, onClose }) {
               {field.label}
               {field.hint && <span style={{ color: '#334155', marginLeft: 6 }}>({field.hint})</span>}
             </div>
-            <input
-              value={(form.adapter_config || {})[field.key] || ''}
-              onChange={e => setAdapterCfg(field.key, e.target.value)}
-              placeholder={field.placeholder}
-              style={inputStyle}
-            />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                value={(form.adapter_config || {})[field.key] || ''}
+                onChange={e => setAdapterCfg(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              {token && <SecretFieldPicker token={token} onSelect={v => setAdapterCfg(field.key, v)} />}
+            </div>
             <div style={{ fontSize: 10, color: '#334155', marginTop: 3 }}>
-              Use <code style={{ color: '#475569' }}>${'{'}ENV_VAR{'}'}</code> to reference an environment variable
+              Use <code style={{ color: '#475569' }}>${'{'}ENV_VAR{'}'}</code> or <code style={{ color: '#475569' }}>${'{'}secret:KEY{'}'}</code>
             </div>
           </div>
         ))}
@@ -762,9 +838,130 @@ function WidgetsPanel({ config, onSave, onClose }) {
   )
 }
 
+// ─── Secrets Panel ────────────────────────────────────────────────
+
+function SecretsPanel({ token, onClose }) {
+  const [keys, setKeys] = useState([])
+  const [newKey, setNewKey] = useState('')
+  const [newVal, setNewVal] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [importing, setImporting] = useState(false)
+  const importRef = useRef(null)
+
+  const headers = { 'X-Hive-Token': token, 'Content-Type': 'application/json' }
+
+  const fetchKeys = async () => {
+    const res = await fetch('/api/secrets', { headers })
+    if (res.ok) {
+      const data = await res.json()
+      setKeys((data.keys || []).sort())
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchKeys() }, [])
+
+  const addSecret = async () => {
+    if (!newKey.trim() || !newVal.trim()) return
+    await fetch('/api/secrets', { method: 'PUT', headers, body: JSON.stringify({ key: newKey.trim(), value: newVal.trim() }) })
+    setNewKey(''); setNewVal('')
+    fetchKeys()
+  }
+
+  const deleteSecret = async (key) => {
+    if (!confirm(`Delete secret "${key}"?`)) return
+    await fetch(`/api/secrets?key=${encodeURIComponent(key)}`, { method: 'DELETE', headers })
+    fetchKeys()
+  }
+
+  const exportSecrets = async () => {
+    const res = await fetch('/api/secrets/backup', { headers })
+    if (!res.ok) return alert('No secrets to export.')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'secrets.yaml'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const importSecrets = async (file) => {
+    setImporting(true)
+    const text = await file.text()
+    const res = await fetch('/api/secrets/import', {
+      method: 'POST',
+      headers: { 'X-Hive-Token': token, 'Content-Type': 'application/x-yaml' },
+      body: text,
+    })
+    setImporting(false)
+    if (res.ok) fetchKeys()
+    else alert('Import failed: ' + await res.text())
+  }
+
+  const inputStyle = {
+    padding: '7px 10px', background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7,
+    color: '#F1F5F9', fontSize: 12, outline: 'none', fontFamily: 'inherit',
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 90 }} />
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 360,
+        background: '#0F172A', borderLeft: '1px solid rgba(255,255,255,0.08)',
+        zIndex: 100, display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ color: '#F1F5F9', fontSize: 14, fontWeight: 600 }}>🔑 Secrets</div>
+            <div style={{ color: '#475569', fontSize: 11, marginTop: 2 }}>Use <code style={{ color: '#818CF8', background: 'rgba(99,102,241,0.1)', padding: '1px 4px', borderRadius: 3 }}>{'${secret:KEY}'}</code> in adapter fields</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Key list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {loading ? (
+            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>Loading…</div>
+          ) : keys.length === 0 ? (
+            <div style={{ color: '#475569', fontSize: 12, textAlign: 'center', paddingTop: 24 }}>No secrets yet</div>
+          ) : keys.map(key => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
+              <code style={{ flex: 1, fontSize: 12, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{key}</code>
+              <span style={{ fontSize: 11, color: '#1E293B', letterSpacing: 2 }}>••••••</span>
+              <button onClick={() => deleteSecret(key)} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 13, padding: '0 2px', lineHeight: 1 }}>🗑️</button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add secret */}
+        <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 500 }}>Add / Update Secret</div>
+          <input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder="KEY_NAME" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
+          <input value={newVal} onChange={e => setNewVal(e.target.value)} placeholder="value" type="password" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+            onKeyDown={e => e.key === 'Enter' && addSecret()} />
+          <button onClick={addSecret} style={{ padding: '8px 0', background: '#6366F1', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+            Save Secret
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={exportSecrets} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>
+              ⬇ Export
+            </button>
+            <button onClick={() => importRef.current.click()} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>
+              {importing ? 'Importing…' : '⬆ Import'}
+            </button>
+            <input ref={importRef} type="file" accept=".yaml,.yml" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files[0]; if (f) { importSecrets(f); e.target.value = '' } }} />
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Config Menu (Export / Import) ───────────────────────────────
 
-function ConfigMenu({ onExport, onImport, onWidgets }) {
+function ConfigMenu({ onExport, onImport, onWidgets, onSecrets }) {
   const [open, setOpen] = useState(false)
   const fileRef = useRef(null)
 
@@ -800,6 +997,12 @@ function ConfigMenu({ onExport, onImport, onWidgets }) {
             onMouseLeave={e => e.target.style.background = 'none'}
             onClick={() => { onWidgets(); setOpen(false) }}>
             🧩 Widgets
+          </button>
+          <button type="button" style={menuBtnStyle}
+            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseLeave={e => e.target.style.background = 'none'}
+            onClick={() => { onSecrets(); setOpen(false) }}>
+            🔑 Secrets
           </button>
           <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 8px' }} />
           <button type="button" style={menuBtnStyle}
@@ -941,6 +1144,7 @@ export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('hive_token') || '')
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [widgetsPanelOpen, setWidgetsPanelOpen] = useState(false)
+  const [secretsPanelOpen, setSecretsPanelOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [logoVer, setLogoVer] = useState(Date.now())
   const [activeTab, setActiveTab] = useState('services')
@@ -1247,7 +1451,7 @@ export default function App() {
       {/* Top-right controls */}
       <div className={`fade ${visible ? 'show' : ''}`} style={{ position: 'fixed', top: 20, right: 24, display: 'flex', alignItems: 'center', gap: 8, zIndex: 50 }}>
         {isUnlocked && (
-          <ConfigMenu onExport={authBackup} onImport={authImport} onWidgets={() => setWidgetsPanelOpen(true)} />
+          <ConfigMenu onExport={authBackup} onImport={authImport} onWidgets={() => setWidgetsPanelOpen(true)} onSecrets={() => setSecretsPanelOpen(true)} />
         )}
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
@@ -1447,6 +1651,9 @@ export default function App() {
       </div>
 
       {/* Widgets Panel */}
+      {secretsPanelOpen && (
+        <SecretsPanel token={token} onClose={() => setSecretsPanelOpen(false)} />
+      )}
       {widgetsPanelOpen && (
         <WidgetsPanel config={config} onSave={authSave} onClose={() => setWidgetsPanelOpen(false)} />
       )}
@@ -1468,6 +1675,7 @@ export default function App() {
       {editModal?.type === 'service' && (
         <ServiceModal
           service={editModal.item}
+          token={token}
           onSave={handleSaveService}
           onClose={() => setEditModal(null)} />
       )}
