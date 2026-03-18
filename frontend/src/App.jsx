@@ -231,7 +231,7 @@ function SearchBar({ config }) {
 function StatusDot({ status }) {
   const colors = { online: 'var(--color-green)', warning: 'var(--color-yellow)', offline: 'var(--color-red)', unknown: 'var(--color-text-muted)' }
   const c = colors[status] || colors.unknown
-  return <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}`, flexShrink: 0 }} />
+  return <div style={{ width: 10, height: 10, borderRadius: '50%', background: c, boxShadow: `0 0 8px ${c}`, flexShrink: 0 }} />
 }
 
 const STAT_COLORS = {
@@ -245,12 +245,12 @@ function StatPill({ label, value, status }) {
   const c = STAT_COLORS[status] || STAT_COLORS.info
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 7px', borderRadius: 5, fontSize: 10,
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 9px', borderRadius: 6, fontSize: 11,
       background: c.bg, color: c.color,
     }}>
       <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
-      <span style={{ fontWeight: 500 }}>{value}</span>
+      <span style={{ fontWeight: 600 }}>{value}</span>
     </span>
   )
 }
@@ -312,7 +312,7 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               {status === 'online' && latency !== null && (
-                <span style={{ fontSize: 10, color: 'var(--color-text-ghost)' }}>{latency}ms</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{latency}ms</span>
               )}
               <StatusDot status={status} />
             </div>
