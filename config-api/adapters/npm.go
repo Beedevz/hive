@@ -46,12 +46,20 @@ func fetchNPMStats(cfg map[string]interface{}, baseURL string) AdapterResult {
 
 	stats := []StatItem{}
 
-	// Version — GET /api/ returns {"version":"2.x.x"} without requiring extra auth.
+	// Version — GET /api/ returns {"version":{"major":2,"minor":12,"revision":3}} (no auth needed).
 	var meta struct {
-		Version string `json:"version"`
+		Version struct {
+			Major    int `json:"major"`
+			Minor    int `json:"minor"`
+			Revision int `json:"revision"`
+		} `json:"version"`
 	}
-	if err := do("/api/", &meta); err == nil && meta.Version != "" {
-		stats = append(stats, StatItem{Label: "Version", Value: "v" + meta.Version, Status: "info"})
+	if err := do("/api/", &meta); err == nil && meta.Version.Major > 0 {
+		stats = append(stats, StatItem{
+			Label:  "Version",
+			Value:  fmt.Sprintf("v%d.%d.%d", meta.Version.Major, meta.Version.Minor, meta.Version.Revision),
+			Status: "info",
+		})
 	}
 
 	var hosts []struct {
