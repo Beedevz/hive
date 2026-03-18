@@ -54,28 +54,56 @@ function WeatherWidget({ widget }) {
     const fetchWeather = async (lat, lon) => {
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current=temperature_2m,weathercode,windspeed_10m` +
+          `&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
         )
         const data = await res.json()
-        setWeather(data.current_weather)
+        setWeather(data)
       } catch {}
     }
-    if (cfg.lat != null && cfg.lon != null) {
-      fetchWeather(cfg.lat, cfg.lon)
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => {}
-      )
-    }
-  }, [])
 
-  if (!weather) return null
+    const resolveAndFetch = async () => {
+      const name = cfg.location_name?.trim()
+      if (name) {
+        try {
+          const geo = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`
+          )
+          const geoData = await geo.json()
+          const loc = geoData.results?.[0]
+          if (loc) { fetchWeather(loc.latitude, loc.longitude); return }
+        } catch {}
+      }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+          () => {}
+        )
+      }
+    }
+
+    resolveAndFetch()
+  }, [cfg.location_name])
+
+  if (!weather?.current) return null
+  const cur = weather.current
+  const daily = weather.daily
+  const tMax = daily?.temperature_2m_max?.[0]
+  const tMin = daily?.temperature_2m_min?.[0]
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
-      <span style={{ fontSize: 20 }}>{WMO_ICONS[weather.weathercode] || '🌡️'}</span>
-      <span>{Math.round(weather.temperature)}°C</span>
-      {cfg.location_name && <span style={{ color: '#334155' }}>· {cfg.location_name}</span>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#64748B' }}>
+      <span style={{ fontSize: 20 }}>{WMO_ICONS[cur.weathercode] || '🌡️'}</span>
+      <span style={{ color: '#94A3B8', fontWeight: 500 }}>{Math.round(cur.temperature_2m)}°C</span>
+      {tMax != null && tMin != null && (
+        <span style={{ fontSize: 11 }}>
+          <span style={{ color: '#F87171' }}>↑{Math.round(tMax)}°</span>
+          {' '}
+          <span style={{ color: '#60A5FA' }}>↓{Math.round(tMin)}°</span>
+        </span>
+      )}
+      {cfg.location_name && <span style={{ color: '#475569' }}>· {cfg.location_name}</span>}
     </div>
   )
 }
@@ -712,9 +740,7 @@ const WIDGET_DEFS = [
   ]},
   { type: 'resources', label: 'Resources', icon: '📊', fields: [] },
   { type: 'weather',   label: 'Weather',   icon: '🌤️', fields: [
-    { key: 'lat',           label: 'Latitude',      type: 'number', placeholder: '41.01' },
-    { key: 'lon',           label: 'Longitude',     type: 'number', placeholder: '28.98' },
-    { key: 'location_name', label: 'Location name', type: 'text',   placeholder: 'Istanbul' },
+    { key: 'location_name', label: 'City / Location', type: 'text', placeholder: 'Istanbul  (leave empty to auto-detect)' },
   ]},
 ]
 
