@@ -129,16 +129,18 @@ func piholeV6Stats(client *http.Client, baseURL, sid string) (AdapterResult, boo
 
 	stats := buildPiholeStats("", data.Queries.Total, data.Queries.Blocked, data.Queries.PercentBlocked, data.Clients.Active)
 
-	// Version — GET /api/info/version returns core.tag (e.g. "v6.0.1")
+	// Version — GET /api/info/version returns version.core.local.version (e.g. "v6.0.5")
 	var verResp struct {
 		Version struct {
 			Core struct {
-				Tag string `json:"tag"`
+				Local struct {
+					Version string `json:"version"`
+				} `json:"local"`
 			} `json:"core"`
 		} `json:"version"`
 	}
-	if err := doGet("/api/info/version", &verResp); err == nil && verResp.Version.Core.Tag != "" {
-		stats = append([]StatItem{{Label: "Version", Value: verResp.Version.Core.Tag, Status: "info"}}, stats...)
+	if err := doGet("/api/info/version", &verResp); err == nil && verResp.Version.Core.Local.Version != "" {
+		stats = append([]StatItem{{Label: "Version", Value: verResp.Version.Core.Local.Version, Status: "info"}}, stats...)
 	}
 
 	return AdapterResult{Adapter: "pihole", Ok: true, Stats: stats}, true
