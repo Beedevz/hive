@@ -503,67 +503,6 @@ function SectionModal({ section, onSave, onClose }) {
 
 // ─── Modal: Add/Edit Service ──────────────────────────────────────
 
-const SI = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/'
-const ADAPTER_DEFS = {
-  '':               { label: 'None',                icon: '',                                   fields: [] },
-  // ── Monitoring ──────────────────────────────────────────────────
-  adguard:          { label: 'AdGuard Home',        icon: SI+'adguard-home.svg',                fields: [{ key: 'username', label: 'Username', placeholder: '${ADGUARD_USER}' }, { key: 'password', label: 'Password', placeholder: '${ADGUARD_PASS}' }] },
-  pihole:           { label: 'Pi-hole',             icon: SI+'pi-hole.svg',                     fields: [{ key: 'token', label: 'API Token (optional)', placeholder: '${PIHOLE_TOKEN}' }] },
-  grafana:          { label: 'Grafana',             icon: SI+'grafana.svg',                     fields: [{ key: 'token', label: 'Service Account Token', placeholder: '${GRAFANA_TOKEN}' }] },
-  netdata:          { label: 'Netdata',             icon: SI+'netdata.svg',                     fields: [] },
-  'uptime-kuma':    { label: 'Uptime Kuma',         icon: SI+'uptime-kuma.svg',                 fields: [{ key: 'username', label: 'Username', placeholder: '${UPTIMEKUMA_USER}' }, { key: 'password', label: 'Password', placeholder: '${UPTIMEKUMA_PASS}', type: 'password' }] },
-  // ── Infrastructure ───────────────────────────────────────────────
-  proxmox:          { label: 'Proxmox',             icon: SI+'proxmox.svg',                     fields: [{ key: 'token', label: 'API Token', placeholder: '${PROXMOX_TOKEN}', hint: 'Format: USER@REALM!TOKENID=SECRET' }] },
-  portainer:        { label: 'Portainer',           icon: SI+'portainer.svg',                   fields: [{ key: 'token', label: 'API Key', placeholder: '${PORTAINER_TOKEN}' }] },
-  traefik:          { label: 'Traefik',             icon: SI+'traefik.svg',                     fields: [{ key: 'username', label: 'Username (optional)', placeholder: '${TRAEFIK_USER}' }, { key: 'password', label: 'Password (optional)', placeholder: '${TRAEFIK_PASS}' }] },
-  npm:              { label: 'Nginx Proxy Manager', icon: SI+'nginx-proxy-manager.svg',         fields: [{ key: 'username', label: 'Username / E-mail', placeholder: '${NPM_USER}' }, { key: 'password', label: 'Password', placeholder: '${NPM_PASS}' }] },
-  // ── Media ────────────────────────────────────────────────────────
-  jellyfin:         { label: 'Jellyfin',            icon: SI+'jellyfin.svg',                    fields: [{ key: 'token', label: 'API Key', placeholder: '${JELLYFIN_TOKEN}' }] },
-  plex:             { label: 'Plex',                icon: SI+'plex.svg',                        fields: [{ key: 'token', label: 'X-Plex-Token', placeholder: '${PLEX_TOKEN}' }] },
-  sonarr:           { label: 'Sonarr',              icon: SI+'sonarr.svg',                      fields: [{ key: 'apikey', label: 'API Key', placeholder: '${SONARR_APIKEY}' }] },
-  radarr:           { label: 'Radarr',              icon: SI+'radarr.svg',                      fields: [{ key: 'apikey', label: 'API Key', placeholder: '${RADARR_APIKEY}' }] },
-  qbittorrent:      { label: 'qBittorrent',         icon: SI+'qbittorrent.svg',                 fields: [{ key: 'username', label: 'Username', placeholder: '${QB_USER}' }, { key: 'password', label: 'Password', placeholder: '${QB_PASS}', type: 'password' }] },
-  // ── Services ─────────────────────────────────────────────────────
-  nextcloud:        { label: 'Nextcloud',           icon: SI+'nextcloud.svg',                   fields: [{ key: 'username', label: 'Admin Username', placeholder: '${NC_USER}' }, { key: 'password', label: 'Password', placeholder: '${NC_PASS}', type: 'password' }] },
-  immich:           { label: 'Immich',              icon: SI+'immich.svg',                      fields: [{ key: 'apikey', label: 'API Key', placeholder: '${IMMICH_APIKEY}' }] },
-  vaultwarden:      { label: 'Vaultwarden',         icon: SI+'vaultwarden.svg',                 fields: [] },
-  homeassistant:    { label: 'Home Assistant',      icon: SI+'home-assistant.svg',              fields: [{ key: 'token', label: 'Long-Lived Access Token', placeholder: '${HASS_TOKEN}' }] },
-  // ── Arr stack ────────────────────────────────────────────────────
-  lidarr:           { label: 'Lidarr',              icon: SI+'lidarr.svg',                      fields: [{ key: 'apikey', label: 'API Key', placeholder: '${LIDARR_APIKEY}' }] },
-  readarr:          { label: 'Readarr',             icon: SI+'readarr.svg',                     fields: [{ key: 'apikey', label: 'API Key', placeholder: '${READARR_APIKEY}' }] },
-  prowlarr:         { label: 'Prowlarr',            icon: SI+'prowlarr.svg',                    fields: [{ key: 'apikey', label: 'API Key', placeholder: '${PROWLARR_APIKEY}' }] },
-  bazarr:           { label: 'Bazarr',              icon: SI+'bazarr.svg',                      fields: [{ key: 'apikey', label: 'API Key', placeholder: '${BAZARR_APIKEY}' }] },
-  emby:             { label: 'Emby',                icon: SI+'emby.svg',                        fields: [{ key: 'token', label: 'API Key', placeholder: '${EMBY_TOKEN}' }] },
-  overseerr:        { label: 'Overseerr',           icon: SI+'overseerr.svg',                   fields: [{ key: 'apikey', label: 'API Key', placeholder: '${OVERSEERR_APIKEY}' }] },
-  jellyseerr:       { label: 'Jellyseerr',          icon: SI+'jellyseerr.svg',                  fields: [{ key: 'apikey', label: 'API Key', placeholder: '${JELLYSEERR_APIKEY}' }] },
-  // ── Download ─────────────────────────────────────────────────────
-  sabnzbd:          { label: 'SABnzbd',             icon: SI+'sabnzbd.svg',                     fields: [{ key: 'apikey', label: 'API Key', placeholder: '${SABNZBD_APIKEY}' }] },
-  nzbget:           { label: 'NZBGet',              icon: SI+'nzbget.svg',                      fields: [{ key: 'username', label: 'Username', placeholder: '${NZBGET_USER}' }, { key: 'password', label: 'Password', placeholder: '${NZBGET_PASS}', type: 'password' }] },
-  transmission:     { label: 'Transmission',        icon: SI+'transmission.svg',                fields: [{ key: 'username', label: 'Username', placeholder: '${TR_USER}' }, { key: 'password', label: 'Password', placeholder: '${TR_PASS}', type: 'password' }] },
-  deluge:           { label: 'Deluge',              icon: SI+'deluge.svg',                      fields: [{ key: 'password', label: 'Password', placeholder: '${DELUGE_PASS}', type: 'password' }] },
-  // ── System ───────────────────────────────────────────────────────
-  glances:          { label: 'Glances',             icon: SI+'glances.svg',                     fields: [] },
-  truenas:          { label: 'TrueNAS',             icon: SI+'truenas.svg',                     fields: [{ key: 'apikey', label: 'API Key', placeholder: '${TRUENAS_APIKEY}' }] },
-  scrutiny:         { label: 'Scrutiny',            icon: SI+'scrutiny.svg',                    fields: [] },
-  synology:         { label: 'Synology DSM',        icon: SI+'synology.svg',                    fields: [{ key: 'username', label: 'Username', placeholder: '${SYNO_USER}' }, { key: 'password', label: 'Password', placeholder: '${SYNO_PASS}', type: 'password' }] },
-  unifi:            { label: 'UniFi',               icon: SI+'ubiquiti.svg',                    fields: [{ key: 'username', label: 'Username', placeholder: '${UNIFI_USER}' }, { key: 'password', label: 'Password', placeholder: '${UNIFI_PASS}', type: 'password' }, { key: 'site', label: 'Site (default: default)', placeholder: 'default' }] },
-  opnsense:         { label: 'OPNsense',            icon: SI+'opnsense.svg',                    fields: [{ key: 'apikey', label: 'API Key', placeholder: '${OPNS_KEY}' }, { key: 'apisecret', label: 'API Secret', placeholder: '${OPNS_SECRET}', type: 'password' }] },
-  frigate:          { label: 'Frigate NVR',         icon: SI+'frigate.svg',                     fields: [] },
-  watchtower:       { label: 'Watchtower',          icon: SI+'watchtower.svg',                  fields: [{ key: 'token', label: 'HTTP API Token', placeholder: '${WATCHTOWER_TOKEN}' }] },
-  // ── Storage ───────────────────────────────────────────────────────
-  wdmycloud:        { label: 'WD My Cloud',         icon: SI+'western-digital.svg',             fields: [{ key: 'username', label: 'Username', placeholder: '${WD_USER}' }, { key: 'password', label: 'Password', placeholder: '${WD_PASS}', type: 'password' }] },
-  // ── Dev & Tools ──────────────────────────────────────────────────
-  gitlab:           { label: 'GitLab',              icon: SI+'gitlab.svg',                      fields: [{ key: 'token', label: 'Token', placeholder: '${GITLAB_TOKEN}' }] },
-  gitea:            { label: 'Gitea',               icon: SI+'gitea.svg',                       fields: [{ key: 'token', label: 'API Token', placeholder: '${GITEA_TOKEN}' }] },
-  forgejo:          { label: 'Forgejo',             icon: SI+'forgejo.svg',                     fields: [{ key: 'token', label: 'API Token', placeholder: '${FORGEJO_TOKEN}' }] },
-  paperless:        { label: 'Paperless-ngx',       icon: SI+'paperless-ngx.svg',               fields: [{ key: 'token', label: 'API Token', placeholder: '${PAPERLESS_TOKEN}' }] },
-  firefly:          { label: 'Firefly III',         icon: SI+'firefly-iii.svg',                 fields: [{ key: 'token', label: 'Personal Access Token', placeholder: '${FIREFLY_TOKEN}' }] },
-  speedtest:        { label: 'Speedtest Tracker',   icon: SI+'speedtest-tracker.svg',           fields: [] },
-  // ── Network ──────────────────────────────────────────────────────
-  cloudflare:       { label: 'Cloudflare Tunnels',  icon: SI+'cloudflare.svg',                  fields: [{ key: 'apikey', label: 'API Token', placeholder: '${CF_TOKEN}' }, { key: 'accountid', label: 'Account ID', placeholder: '${CF_ACCOUNT_ID}' }] },
-  tailscale:        { label: 'Tailscale',           icon: SI+'tailscale.svg',                   fields: [{ key: 'apikey', label: 'API Key', placeholder: '${TS_APIKEY}' }, { key: 'tailnet', label: 'Tailnet', placeholder: '${TS_TAILNET}' }] },
-}
-
 // ─── Secret Field Picker ──────────────────────────────────────────
 
 function SecretFieldPicker({ token, onSelect }) {
@@ -647,12 +586,12 @@ function SecretFieldPicker({ token, onSelect }) {
   )
 }
 
-function ServiceModal({ service, onSave, onClose, token }) {
+function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
   const [form, setForm] = useState(service || { name: '', url: '', icon: '', description: '', tag: '', adapter: '', adapter_config: {} })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const setAdapterCfg = (k, v) => setForm(p => ({ ...p, adapter_config: { ...(p.adapter_config || {}), [k]: v } }))
 
-  const adapterDef = ADAPTER_DEFS[form.adapter || ''] || ADAPTER_DEFS['']
+  const adapterDef = adapterCatalog[form.adapter || ''] || adapterCatalog[''] || { fields: [] }
   const inputStyle = { width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#F1F5F9', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }
 
   return (
@@ -683,15 +622,15 @@ function ServiceModal({ service, onSave, onClose, token }) {
           <select
             value={form.adapter || ''}
             onChange={e => {
-              const def = ADAPTER_DEFS[e.target.value] || ADAPTER_DEFS['']
-              const adapterIcons = new Set(Object.values(ADAPTER_DEFS).map(d => d.icon).filter(Boolean))
+              const def = adapterCatalog[e.target.value] || adapterCatalog[''] || {}
+              const adapterIcons = new Set(Object.values(adapterCatalog).map(d => d.icon).filter(Boolean))
               setForm(p => {
                 const isAutoIcon = !p.icon || adapterIcons.has(p.icon)
                 return { ...p, adapter: e.target.value, icon: isAutoIcon ? (def.icon || '') : p.icon }
               })
             }}
             style={{ ...inputStyle, appearance: 'none' }}>
-            {Object.entries(ADAPTER_DEFS).map(([k, v]) => (
+            {Object.entries(adapterCatalog).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
@@ -1183,6 +1122,7 @@ export default function App() {
   const [secretsPanelOpen, setSecretsPanelOpen] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [logoVer, setLogoVer] = useState(Date.now())
+  const [adapterCatalog, setAdapterCatalog] = useState({})
   const [activeTab, setActiveTab] = useState('services')
   const [collapsedCategories, setCollapsedCategories] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('hive_collapsed') || '[]')) }
@@ -1203,6 +1143,17 @@ export default function App() {
 
   useEffect(() => {
     fetch('/api/version').then(r => r.json()).then(d => setAppVersion(d.version || '')).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/adapters-catalog')
+      .then(r => r.json())
+      .then(list => {
+        const map = {}
+        list.forEach(d => { map[d.key] = d })
+        setAdapterCatalog(map)
+      })
+      .catch(() => {})
   }, [])
 
   const handleUnlock = async (t) => {
@@ -1710,6 +1661,7 @@ export default function App() {
         <ServiceModal
           service={editModal.item}
           token={token}
+          adapterCatalog={adapterCatalog}
           onSave={handleSaveService}
           onClose={() => setEditModal(null)} />
       )}
