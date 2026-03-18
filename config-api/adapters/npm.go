@@ -51,7 +51,7 @@ func fetchNPMStats(cfg map[string]interface{}, baseURL string) AdapterResult {
 		Version string `json:"version"`
 	}
 	if err := do("/api/", &meta); err == nil && meta.Version != "" {
-		stats = append(stats, StatItem{Label: "Version", Value: "v" + meta.Version, Status: "ok"})
+		stats = append(stats, StatItem{Label: "Version", Value: "v" + meta.Version, Status: "info"})
 	}
 
 	var hosts []struct {
