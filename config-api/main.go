@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -317,27 +318,46 @@ func handleProbe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleProbeStatus performs a HEAD (fallback: GET) against the service URL
-// stored in config and returns an online/offline/unknown result.
+// handleProbeStatus returns online/offline/unknown for a service.
+// For services with an adapter: uses the cached adapter result so that
+// authenticated APIs (e.g. Proxmox) are not probed over plain HTTP.
+// Falls back to HEAD/GET probe when no adapter cache is available.
 func handleProbeStatus(w http.ResponseWriter, r *http.Request, svc *serviceItem) {
-	unknown := func() {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(probeResult{Status: "unknown", LatencyMs: 0})
+	if result, ok := adapterCacheStatus(svc); ok {
+		writeJSON(w, result)
+		return
 	}
+	writeJSON(w, httpProbeStatus(r, svc))
+}
+
+// adapterCacheStatus returns the cached adapter result as a probeResult.
+// Returns (result, true) if the adapter has a cached entry, (zero, false) otherwise.
+func adapterCacheStatus(svc *serviceItem) (probeResult, bool) {
+	if svc.Adapter == "" {
+		return probeResult{}, false
+	}
+	cached, ok := adapters.GetCached(svc.Adapter + ":" + svc.Name)
+	if !ok {
+		return probeResult{}, false
+	}
+	status := "offline"
+	if cached.Ok {
+		status = "online"
+	}
+	return probeResult{Status: status, LatencyMs: -1}, true
+}
+
+// httpProbeStatus performs a HEAD (fallback GET) against the service URL.
+func httpProbeStatus(r *http.Request, svc *serviceItem) probeResult {
+	unknown := probeResult{Status: "unknown", LatencyMs: 0}
 
 	if svc.URL == "" {
-		unknown()
-		return
+		return unknown
 	}
-
 	parsed, err := url.Parse(svc.URL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		unknown()
-		return
+		return unknown
 	}
-
-	// URL is from trusted config, not user input — reconstruct from parsed
-	// fields to keep the pattern consistent and prevent any residual taint.
 	safeURL := &url.URL{
 		Scheme:   parsed.Scheme,
 		Host:     parsed.Host,
@@ -348,35 +368,29 @@ func handleProbeStatus(w http.ResponseWriter, r *http.Request, svc *serviceItem)
 	client := probeClient()
 	start := time.Now()
 
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodHead, safeURL.String(), nil)
-	var resp *http.Response
-	if err == nil {
-		resp, err = client.Do(req)
-	}
+	resp, err := doProbeRequest(r.Context(), client, http.MethodHead, safeURL.String())
 	if err != nil && !isTimeoutError(err) {
-		// Some servers (e.g. Proxmox) don't support HEAD; fall back to GET.
-		// Don't retry on timeout — that would double the wait time.
-		req, err = http.NewRequestWithContext(r.Context(), http.MethodGet, safeURL.String(), nil)
-		if err == nil {
-			resp, err = client.Do(req)
-		}
+		// Some servers don't support HEAD; fall back to GET.
+		resp, err = doProbeRequest(r.Context(), client, http.MethodGet, safeURL.String())
 	}
 	latency := time.Since(start).Milliseconds()
 
-	result := probeResult{LatencyMs: latency}
 	if err != nil {
-		result.Status = "offline"
-	} else {
-		resp.Body.Close()
-		if resp.StatusCode < 500 {
-			result.Status = "online"
-		} else {
-			result.Status = "offline"
-		}
+		return probeResult{Status: "offline", LatencyMs: latency}
 	}
+	resp.Body.Close()
+	if resp.StatusCode < 500 {
+		return probeResult{Status: "online", LatencyMs: latency}
+	}
+	return probeResult{Status: "offline", LatencyMs: latency}
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+func doProbeRequest(ctx context.Context, client *http.Client, method, rawURL string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	return client.Do(req)
 }
 
 // handleProbeDetails delegates to the service's configured adapter and returns

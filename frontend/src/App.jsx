@@ -423,7 +423,7 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              {status === 'online' && latency !== null && (
+              {status === 'online' && latency !== null && latency >= 0 && (
                 <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{latency}ms</span>
               )}
               <StatusDot status={status} />
