@@ -588,8 +588,14 @@ function BookmarkModal({ bookmark, onSave, onClose }) {
           <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>
             Icon <span style={{ color: 'var(--color-text-ghost)' }}>— emoji or URL (leave empty for auto favicon)</span>
           </div>
-          <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} placeholder="auto"
-            style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} placeholder="auto"
+              style={{ flex: 1, padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+            <IconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--color-overlay-md3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {form.icon ? renderIcon(form.icon, '🔖', 22) : <FaviconIcon url={form.url} size={22} />}
+            </div>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
