@@ -630,13 +630,14 @@ func main() {
 				http.Error(w, "Write error: "+err.Error(), 500)
 				return
 			}
-			if _, err := io.Copy(dst, file); err != nil {
-				dst.Close()
-				http.Error(w, "Write error: "+err.Error(), 500)
+			_, copyErr := io.Copy(dst, file)
+			closeErr := dst.Close()
+			if copyErr != nil {
+				http.Error(w, "Write error: "+copyErr.Error(), 500)
 				return
 			}
-			if err := dst.Close(); err != nil {
-				http.Error(w, "Write error: "+err.Error(), 500)
+			if closeErr != nil {
+				http.Error(w, "Write error: "+closeErr.Error(), 500)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
