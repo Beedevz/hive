@@ -366,6 +366,39 @@ function ServiceCard({ item, onEdit, onDelete, compact }) {
   )
 }
 
+// ─── Favicon helper ───────────────────────────────────────────────
+
+function faviconUrls(url) {
+  try {
+    const domain = new URL(url).hostname
+    return {
+      primary:  `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+      fallback: `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    }
+  } catch {
+    return null
+  }
+}
+
+function FaviconIcon({ url, size = 24 }) {
+  const fav = faviconUrls(url)
+  const [src, setSrc] = useState(fav?.primary || null)
+  const [failed, setFailed] = useState(!fav)
+
+  if (failed || !src) {
+    return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🔖</span>
+  }
+  return (
+    <img src={src} alt="" width={size} height={size}
+      style={{ objectFit: 'contain', flexShrink: 0, borderRadius: 3 }}
+      onError={() => {
+        if (fav && src === fav.primary) { setSrc(fav.fallback) }
+        else { setFailed(true) }
+      }}
+    />
+  )
+}
+
 function BookmarkCard({ item, onEdit, onDelete }) {
   const [hov, setHov] = useState(false)
   return (
@@ -374,16 +407,25 @@ function BookmarkCard({ item, onEdit, onDelete }) {
       <a href={item.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}
         title={[item.name, item.description].filter(Boolean).join('\n')}>
         <div style={{
-          background: hov ? 'var(--color-overlay-md3)' : 'var(--color-overlay-xs)',
-          border: '1px solid var(--color-overlay-md2)',
+          background: hov ? 'var(--color-overlay-lg2)' : 'var(--color-overlay-sm)',
+          border: `1px solid ${hov ? 'var(--color-accent-border)' : 'var(--color-overlay-md3)'}`,
           borderRadius: 10, padding: '0 14px',
-          display: 'flex', alignItems: 'center', gap: 10,
+          display: 'flex', alignItems: 'center', gap: 12,
           height: 64, overflow: 'hidden',
           transition: 'all 0.15s',
+          transform: hov ? 'translateY(-1px)' : 'none',
         }}>
-          {renderIcon(item.icon, '🔖', 18)}
+          <div style={{
+            width: 36, height: 36, borderRadius: 8, background: 'var(--color-overlay-md3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            {item.icon
+              ? renderIcon(item.icon, '🔖', 20)
+              : <FaviconIcon url={item.url} size={20} />
+            }
+          </div>
           <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
             {item.description && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
           </div>
         </div>
@@ -409,17 +451,34 @@ function BookmarkCard({ item, onEdit, onDelete }) {
 function BookmarkModal({ bookmark, onSave, onClose }) {
   const [form, setForm] = useState(bookmark || { name: '', url: '', icon: '', description: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  const previewIcon = form.icon
+    ? renderIcon(form.icon, '🔖', 28)
+    : <FaviconIcon url={form.url} size={28} />
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
       <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 16, padding: 28, width: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{bookmark ? 'Edit Bookmark' : 'New Bookmark'}</h3>
-        {[['name','Name'],['url','URL'],['icon','Icon (emoji)'],['description','Description']].map(([k,l]) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--color-overlay-md3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {previewIcon}
+          </div>
+          <h3 style={{ color: 'var(--color-text-bright)', fontSize: 16, fontWeight: 600 }}>{bookmark ? 'Edit Bookmark' : 'New Bookmark'}</h3>
+        </div>
+        {[['name','Name'],['url','URL'],['description','Description']].map(([k,l]) => (
           <div key={k}>
             <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>{l}</div>
             <input value={form[k] || ''} onChange={e => set(k, e.target.value)}
               style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
           </div>
         ))}
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>
+            Icon <span style={{ color: 'var(--color-text-ghost)' }}>— emoji or URL (leave empty for auto favicon)</span>
+          </div>
+          <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} placeholder="auto"
+            style={{ width: '100%', padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+        </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
           <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--color-accent)', border: 'none', borderRadius: 8, color: 'var(--color-white)', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Save</button>
