@@ -1,0 +1,72 @@
+replicaCount: 1
+
+image:
+  repository: beedevztech/hive
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to .Chart.AppVersion
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Token for editing the dashboard (HIVE_TOKEN env var).
+# Set a strong secret here before exposing Hive to a network.
+hiveToken: "changeme"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: hive.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - secretName: hive-tls
+  #   hosts:
+  #     - hive.local
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 100Mi
+
+# Initial config.yaml content loaded into ConfigMap.
+# When persistence.enabled=true this is copied to the PVC on first run only.
+# When persistence.enabled=false the ConfigMap is mounted directly (read-only).
+config: |
+  settings:
+    title: "Hive"
+    theme: dark
+    language: en
+    show_greeting: true
+    greeting: "Good morning"
+    columns: 2
+  widgets:
+    - type: clock
+      enabled: true
+    - type: search
+      enabled: true
+      config:
+        engine: google
+  services: []
+  bookmarks: []
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 64Mi
+  requests:
+    cpu: 50m
+    memory: 32Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

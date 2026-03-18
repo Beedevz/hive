@@ -1,0 +1,45 @@
+name: Helm Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  helm-release:
+    name: Package & Publish Helm Chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push to gh-pages & create release assets
+
+    steps:
+      - name: Checkout (full history required by chart-releaser)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Stamp Chart.yaml with release version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"          # strips leading "v"
+          sed -i "s/^version:.*/version: ${VERSION}/"       helm/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" helm/Chart.yaml
+          echo "Chart version set to ${VERSION}"
+          cat helm/Chart.yaml
+
+      # chart-releaser packages helm/ and publishes to gh-pages.
+      # First run creates the gh-pages branch automatically.
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          charts_dir: .          # looks for Chart.yaml in subdirs of repo root
+          skip_existing: true    # idempotent — safe to re-run on same tag
