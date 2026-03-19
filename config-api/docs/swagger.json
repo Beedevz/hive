@@ -1,0 +1,970 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Config-driven homelab start page backend API.",
+        "title": "Hive API",
+        "contact": {
+            "name": "Beedevz",
+            "url": "https://github.com/beedevz/hive"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/adapters-catalog": {
+            "get": {
+                "description": "Returns all available adapter types with their metadata",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "adapters"
+                ],
+                "summary": "List adapter catalog",
+                "responses": {
+                    "200": {
+                        "description": "Adapter catalog",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/adapters/{type}": {
+            "get": {
+                "description": "Fetches live stats from the named adapter for the given service. Results are cached for 60 s.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "adapters"
+                ],
+                "summary": "Run adapter for a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Adapter type (e.g. pihole, proxmox, sonarr)",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "service",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AdapterResult with stats array",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing adapter type or service parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validates the X-Hive-Token or Bearer token in the request header",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify auth token",
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config": {
+            "get": {
+                "description": "Returns the full configuration as JSON",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get config",
+                "responses": {
+                    "200": {
+                        "description": "Config object",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Config not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the full configuration. Creates a timestamped backup first.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Save config",
+                "parameters": [
+                    {
+                        "description": "Config object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid JSON",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/backup": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Downloads the current config file as a timestamped attachment",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Download config backup",
+                "responses": {
+                    "200": {
+                        "description": "Config backup file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Config not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/raw": {
+            "get": {
+                "description": "Returns the raw YAML or JSON config file content as plain text",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get raw config text",
+                "parameters": [
+                    {
+                        "enum": [
+                            "yaml",
+                            "json"
+                        ],
+                        "type": "string",
+                        "description": "Format override",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Raw config text",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid format",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the config with raw YAML or JSON after validation. Creates a backup first.",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Replace raw config text",
+                "parameters": [
+                    {
+                        "description": "Raw YAML or JSON config",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Parse error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns ok when the API is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/logo": {
+            "get": {
+                "description": "Serves the custom logo if set, otherwise returns the theme-aware default",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get logo",
+                "parameters": [
+                    {
+                        "enum": [
+                            "dark",
+                            "light"
+                        ],
+                        "type": "string",
+                        "description": "Theme variant",
+                        "name": "theme",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo image",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the logo with an uploaded image (PNG, JPEG, SVG, WebP, GIF; max 5 MB)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Upload custom logo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Logo image file",
+                        "name": "logo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or oversized file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported image type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the custom logo, reverting to the default",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Delete custom logo",
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/probe/{name}/details": {
+            "get": {
+                "description": "Checks if a service is online (status) or returns adapter stats (details)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "probe"
+                ],
+                "summary": "Service probe status / details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.probeResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid path or service name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/probe/{name}/status": {
+            "get": {
+                "description": "Checks if a service is online (status) or returns adapter stats (details)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "probe"
+                ],
+                "summary": "Service probe status / details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.probeResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid path or service name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns stored secret key names (values are never exposed)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "List secret keys",
+                "responses": {
+                    "200": {
+                        "description": "{\"keys\":[\"KEY1\",\"KEY2\"]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stores a key-value pair in the secrets file",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Add or update a secret",
+                "parameters": [
+                    {
+                        "description": "{",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a key from the secrets file",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Delete a secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret key to delete",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing ?key=",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets/backup": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Downloads the raw secrets.yaml file as an attachment",
+                "produces": [
+                    "application/x-yaml"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Download secrets backup",
+                "responses": {
+                    "200": {
+                        "description": "secrets.yaml",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "No secrets file found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets/import": {
+            "post": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Merges a YAML key-value map into the existing secrets store",
+                "consumes": [
+                    "application/x-yaml"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Import secrets from YAML",
+                "parameters": [
+                    {
+                        "description": "YAML key-value map",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Read error or Invalid YAML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/system": {
+            "get": {
+                "description": "Returns real-time CPU, RAM and disk usage of the host",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Host system stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.systemInfo"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/version": {
+            "get": {
+                "description": "Returns the running API version",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "API version",
+                "responses": {
+                    "200": {
+                        "description": "{\"version\":\"v1.0.0\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.diskInfo": {
+            "type": "object",
+            "properties": {
+                "percent": {
+                    "type": "number"
+                },
+                "total_gb": {
+                    "type": "number"
+                },
+                "used_gb": {
+                    "type": "number"
+                }
+            }
+        },
+        "main.probeResult": {
+            "type": "object",
+            "properties": {
+                "latency_ms": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.ramInfo": {
+            "type": "object",
+            "properties": {
+                "percent": {
+                    "type": "number"
+                },
+                "total_mb": {
+                    "type": "integer"
+                },
+                "used_mb": {
+                    "type": "integer"
+                }
+            }
+        },
+        "main.systemInfo": {
+            "type": "object",
+            "properties": {
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "disk": {
+                    "$ref": "#/definitions/main.diskInfo"
+                },
+                "ram": {
+                    "$ref": "#/definitions/main.ramInfo"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by your Hive token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "HiveToken": {
+            "type": "apiKey",
+            "name": "X-Hive-Token",
+            "in": "header"
+        }
+    }
+}

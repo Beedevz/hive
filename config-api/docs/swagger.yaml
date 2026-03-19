@@ -1,0 +1,621 @@
+basePath: /api
+definitions:
+  main.diskInfo:
+    properties:
+      percent:
+        type: number
+      total_gb:
+        type: number
+      used_gb:
+        type: number
+    type: object
+  main.probeResult:
+    properties:
+      latency_ms:
+        type: integer
+      status:
+        type: string
+    type: object
+  main.ramInfo:
+    properties:
+      percent:
+        type: number
+      total_mb:
+        type: integer
+      used_mb:
+        type: integer
+    type: object
+  main.systemInfo:
+    properties:
+      cpu_percent:
+        type: number
+      disk:
+        $ref: '#/definitions/main.diskInfo'
+      ram:
+        $ref: '#/definitions/main.ramInfo'
+    type: object
+info:
+  contact:
+    name: Beedevz
+    url: https://github.com/beedevz/hive
+  description: Config-driven homelab start page backend API.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Hive API
+  version: "1.0"
+paths:
+  /adapters-catalog:
+    get:
+      description: Returns all available adapter types with their metadata
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Adapter catalog
+          schema:
+            type: object
+      summary: List adapter catalog
+      tags:
+      - adapters
+  /adapters/{type}:
+    get:
+      description: Fetches live stats from the named adapter for the given service.
+        Results are cached for 60 s.
+      parameters:
+      - description: Adapter type (e.g. pihole, proxmox, sonarr)
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: Service name as defined in config
+        in: query
+        name: service
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AdapterResult with stats array
+          schema:
+            type: object
+        "400":
+          description: Missing adapter type or service parameter
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      summary: Run adapter for a service
+      tags:
+      - adapters
+  /auth/verify:
+    get:
+      description: Validates the X-Hive-Token or Bearer token in the request header
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Verify auth token
+      tags:
+      - auth
+  /config:
+    get:
+      description: Returns the full configuration as JSON
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Config object
+          schema:
+            type: object
+        "404":
+          description: Config not found
+          schema:
+            type: string
+      summary: Get config
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      description: Replaces the full configuration. Creates a timestamped backup first.
+      parameters:
+      - description: Config object
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid JSON
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Save config
+      tags:
+      - config
+  /config/backup:
+    get:
+      description: Downloads the current config file as a timestamped attachment
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Config backup file
+          schema:
+            type: file
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Config not found
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Download config backup
+      tags:
+      - config
+  /config/raw:
+    get:
+      description: Returns the raw YAML or JSON config file content as plain text
+      parameters:
+      - description: Format override
+        enum:
+        - yaml
+        - json
+        in: query
+        name: format
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Raw config text
+          schema:
+            type: string
+        "400":
+          description: Invalid format
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+      summary: Get raw config text
+      tags:
+      - config
+    put:
+      consumes:
+      - text/plain
+      description: Replaces the config with raw YAML or JSON after validation. Creates
+        a backup first.
+      parameters:
+      - description: Raw YAML or JSON config
+        in: body
+        name: body
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Parse error
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Replace raw config text
+      tags:
+      - config
+  /health:
+    get:
+      description: Returns ok when the API is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - system
+  /logo:
+    delete:
+      description: Removes the custom logo, reverting to the default
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Delete custom logo
+      tags:
+      - config
+    get:
+      description: Serves the custom logo if set, otherwise returns the theme-aware
+        default
+      parameters:
+      - description: Theme variant
+        enum:
+        - dark
+        - light
+        in: query
+        name: theme
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: Logo image
+          schema:
+            type: file
+      summary: Get logo
+      tags:
+      - config
+    post:
+      consumes:
+      - multipart/form-data
+      description: Replaces the logo with an uploaded image (PNG, JPEG, SVG, WebP,
+        GIF; max 5 MB)
+      parameters:
+      - description: Logo image file
+        in: formData
+        name: logo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Missing or oversized file
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "415":
+          description: Unsupported image type
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Upload custom logo
+      tags:
+      - config
+  /probe/{name}/details:
+    get:
+      description: Checks if a service is online (status) or returns adapter stats
+        (details)
+      parameters:
+      - description: Service name as defined in config
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.probeResult'
+        "400":
+          description: Invalid path or service name
+          schema:
+            type: string
+        "404":
+          description: Service not found
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      summary: Service probe status / details
+      tags:
+      - probe
+  /probe/{name}/status:
+    get:
+      description: Checks if a service is online (status) or returns adapter stats
+        (details)
+      parameters:
+      - description: Service name as defined in config
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.probeResult'
+        "400":
+          description: Invalid path or service name
+          schema:
+            type: string
+        "404":
+          description: Service not found
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      summary: Service probe status / details
+      tags:
+      - probe
+  /secrets:
+    delete:
+      description: Removes a key from the secrets file
+      parameters:
+      - description: Secret key to delete
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Missing ?key=
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Delete a secret
+      tags:
+      - secrets
+    get:
+      description: Returns stored secret key names (values are never exposed)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"keys":["KEY1","KEY2"]}'
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: List secret keys
+      tags:
+      - secrets
+    put:
+      consumes:
+      - application/json
+      description: Stores a key-value pair in the secrets file
+      parameters:
+      - description: '{'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid body
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Add or update a secret
+      tags:
+      - secrets
+  /secrets/backup:
+    get:
+      description: Downloads the raw secrets.yaml file as an attachment
+      produces:
+      - application/x-yaml
+      responses:
+        "200":
+          description: secrets.yaml
+          schema:
+            type: file
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: No secrets file found
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Download secrets backup
+      tags:
+      - secrets
+  /secrets/import:
+    post:
+      consumes:
+      - application/x-yaml
+      description: Merges a YAML key-value map into the existing secrets store
+      parameters:
+      - description: YAML key-value map
+        in: body
+        name: body
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Read error or Invalid YAML
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Import secrets from YAML
+      tags:
+      - secrets
+  /system:
+    get:
+      description: Returns real-time CPU, RAM and disk usage of the host
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.systemInfo'
+        "405":
+          description: Method not allowed
+          schema:
+            type: string
+      summary: Host system stats
+      tags:
+      - system
+  /version:
+    get:
+      description: Returns the running API version
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"version":"v1.0.0"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: API version
+      tags:
+      - system
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by your Hive token.
+    in: header
+    name: Authorization
+    type: apiKey
+  HiveToken:
+    in: header
+    name: X-Hive-Token
+    type: apiKey
+swagger: "2.0"
