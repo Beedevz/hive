@@ -119,77 +119,53 @@ paths:
       - auth
   /config:
     get:
-      consumes:
-      - application/json
-      description: GET returns the full configuration as JSON. PUT replaces it (creates
-        a backup first).
-      parameters:
-      - description: Config object (PUT only)
-        in: body
-        name: body
-        schema:
-          type: object
+      description: Returns the full configuration as JSON
       produces:
       - application/json
       responses:
         "200":
-          description: Config object or {"status":"ok"}
+          description: Config object
           schema:
             type: object
-        "400":
-          description: Invalid JSON
-          schema:
-            type: string
-        "401":
-          description: Unauthorized (PUT)
-          schema:
-            type: string
         "404":
-          description: Config not found (GET)
+          description: Config not found
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-      summary: Get or save config
+      summary: Get config
       tags:
       - config
     put:
       consumes:
       - application/json
-      description: GET returns the full configuration as JSON. PUT replaces it (creates
-        a backup first).
+      description: Replaces the full configuration. Creates a timestamped backup first.
       parameters:
-      - description: Config object (PUT only)
+      - description: Config object
         in: body
         name: body
+        required: true
         schema:
           type: object
       produces:
       - application/json
       responses:
         "200":
-          description: Config object or {"status":"ok"}
+          description: '{"status":"ok"}'
           schema:
+            additionalProperties:
+              type: string
             type: object
         "400":
           description: Invalid JSON
           schema:
             type: string
         "401":
-          description: Unauthorized (PUT)
+          description: Unauthorized
           schema:
             type: string
-        "404":
-          description: Config not found (GET)
-          schema:
-            type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-      summary: Get or save config
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Save config
       tags:
       - config
   /config/backup:
@@ -222,10 +198,7 @@ paths:
       - config
   /config/raw:
     get:
-      consumes:
-      - text/plain
-      description: GET returns the raw YAML or JSON config text. PUT replaces it after
-        parsing/validation.
+      description: Returns the raw YAML or JSON config file content as plain text
       parameters:
       - description: Format override
         enum:
@@ -242,61 +215,49 @@ paths:
           schema:
             type: string
         "400":
-          description: Invalid format or parse error
-          schema:
-            type: string
-        "401":
-          description: Unauthorized (PUT)
+          description: Invalid format
           schema:
             type: string
         "404":
           description: Not found
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-      summary: Get or replace raw config text
+      summary: Get raw config text
       tags:
       - config
     put:
       consumes:
       - text/plain
-      description: GET returns the raw YAML or JSON config text. PUT replaces it after
-        parsing/validation.
+      description: Replaces the config with raw YAML or JSON after validation. Creates
+        a backup first.
       parameters:
-      - description: Format override
-        enum:
-        - yaml
-        - json
-        in: query
-        name: format
-        type: string
+      - description: Raw YAML or JSON config
+        in: body
+        name: body
+        required: true
+        schema:
+          type: string
       produces:
-      - text/plain
+      - application/json
       responses:
         "200":
-          description: Raw config text
+          description: '{"status":"ok"}'
           schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "400":
-          description: Invalid format or parse error
+          description: Parse error
           schema:
             type: string
         "401":
-          description: Unauthorized (PUT)
+          description: Unauthorized
           schema:
             type: string
-        "404":
-          description: Not found
-          schema:
-            type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-      summary: Get or replace raw config text
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Replace raw config text
       tags:
       - config
   /health:
@@ -316,47 +277,31 @@ paths:
       - system
   /logo:
     delete:
-      description: GET serves the logo (custom or theme-aware default). POST uploads
-        a custom logo. DELETE removes it.
-      parameters:
-      - description: Theme variant (GET only)
-        enum:
-        - dark
-        - light
-        in: query
-        name: theme
-        type: string
+      description: Removes the custom logo, reverting to the default
       produces:
-      - image/png
+      - application/json
       responses:
         "200":
-          description: Logo image or {"status":"ok"}
+          description: '{"status":"ok"}'
           schema:
-            type: file
-        "400":
-          description: Missing or invalid file
-          schema:
-            type: string
+            additionalProperties:
+              type: string
+            type: object
         "401":
           description: Unauthorized
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-        "415":
-          description: Unsupported image type
-          schema:
-            type: string
-      summary: Get, upload or delete logo
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Delete custom logo
       tags:
       - config
     get:
-      description: GET serves the logo (custom or theme-aware default). POST uploads
-        a custom logo. DELETE removes it.
+      description: Serves the custom logo if set, otherwise returns the theme-aware
+        default
       parameters:
-      - description: Theme variant (GET only)
+      - description: Theme variant
         enum:
         - dark
         - light
@@ -367,63 +312,48 @@ paths:
       - image/png
       responses:
         "200":
-          description: Logo image or {"status":"ok"}
+          description: Logo image
           schema:
             type: file
-        "400":
-          description: Missing or invalid file
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
-        "415":
-          description: Unsupported image type
-          schema:
-            type: string
-      summary: Get, upload or delete logo
+      summary: Get logo
       tags:
       - config
     post:
-      description: GET serves the logo (custom or theme-aware default). POST uploads
-        a custom logo. DELETE removes it.
+      consumes:
+      - multipart/form-data
+      description: Replaces the logo with an uploaded image (PNG, JPEG, SVG, WebP,
+        GIF; max 5 MB)
       parameters:
-      - description: Theme variant (GET only)
-        enum:
-        - dark
-        - light
-        in: query
-        name: theme
-        type: string
+      - description: Logo image file
+        in: formData
+        name: logo
+        required: true
+        type: file
       produces:
-      - image/png
+      - application/json
       responses:
         "200":
-          description: Logo image or {"status":"ok"}
+          description: '{"status":"ok"}'
           schema:
-            type: file
+            additionalProperties:
+              type: string
+            type: object
         "400":
-          description: Missing or invalid file
+          description: Missing or oversized file
           schema:
             type: string
         "401":
           description: Unauthorized
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
         "415":
           description: Unsupported image type
           schema:
             type: string
-      summary: Get, upload or delete logo
+      security:
+      - HiveToken: []
+      - BearerAuth: []
+      summary: Upload custom logo
       tags:
       - config
   /probe/{name}/details:
@@ -492,123 +422,91 @@ paths:
       - probe
   /secrets:
     delete:
-      consumes:
-      - application/json
-      description: GET returns secret key names. PUT adds/updates a secret. DELETE
-        removes a secret.
+      description: Removes a key from the secrets file
       parameters:
-      - description: Secret key to delete (DELETE only)
+      - description: Secret key to delete
         in: query
         name: key
+        required: true
         type: string
-      - description: '{'
-        in: body
-        name: body
-        schema:
-          type: object
       produces:
       - application/json
       responses:
         "200":
-          description: Key list or {"status":"ok"}
+          description: '{"status":"ok"}'
           schema:
+            additionalProperties:
+              type: string
             type: object
         "400":
-          description: Invalid body or missing key
+          description: Missing ?key=
           schema:
             type: string
         "401":
           description: Unauthorized
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
       security:
       - HiveToken: []
       - BearerAuth: []
-      summary: Manage secrets
+      summary: Delete a secret
       tags:
       - secrets
     get:
-      consumes:
-      - application/json
-      description: GET returns secret key names. PUT adds/updates a secret. DELETE
-        removes a secret.
-      parameters:
-      - description: Secret key to delete (DELETE only)
-        in: query
-        name: key
-        type: string
-      - description: '{'
-        in: body
-        name: body
-        schema:
-          type: object
+      description: Returns stored secret key names (values are never exposed)
       produces:
       - application/json
       responses:
         "200":
-          description: Key list or {"status":"ok"}
+          description: '{"keys":["KEY1","KEY2"]}'
           schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
             type: object
-        "400":
-          description: Invalid body or missing key
-          schema:
-            type: string
         "401":
           description: Unauthorized
-          schema:
-            type: string
-        "405":
-          description: Method not allowed
           schema:
             type: string
       security:
       - HiveToken: []
       - BearerAuth: []
-      summary: Manage secrets
+      summary: List secret keys
       tags:
       - secrets
     put:
       consumes:
       - application/json
-      description: GET returns secret key names. PUT adds/updates a secret. DELETE
-        removes a secret.
+      description: Stores a key-value pair in the secrets file
       parameters:
-      - description: Secret key to delete (DELETE only)
-        in: query
-        name: key
-        type: string
       - description: '{'
         in: body
         name: body
+        required: true
         schema:
           type: object
       produces:
       - application/json
       responses:
         "200":
-          description: Key list or {"status":"ok"}
+          description: '{"status":"ok"}'
           schema:
+            additionalProperties:
+              type: string
             type: object
         "400":
-          description: Invalid body or missing key
+          description: Invalid body
           schema:
             type: string
         "401":
           description: Unauthorized
           schema:
             type: string
-        "405":
-          description: Method not allowed
-          schema:
-            type: string
       security:
       - HiveToken: []
       - BearerAuth: []
-      summary: Manage secrets
+      summary: Add or update a secret
       tags:
       - secrets
   /secrets/backup:

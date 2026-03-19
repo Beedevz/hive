@@ -135,54 +135,23 @@ const docTemplate = `{
         },
         "/config": {
             "get": {
-                "description": "GET returns the full configuration as JSON. PUT replaces it (creates a backup first).",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Returns the full configuration as JSON",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get or save config",
-                "parameters": [
-                    {
-                        "description": "Config object (PUT only)",
-                        "name": "body",
-                        "in": "body",
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
+                "summary": "Get config",
                 "responses": {
                     "200": {
-                        "description": "Config object or {\"status\":\"ok\"}",
+                        "description": "Config object",
                         "schema": {
                             "type": "object"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid JSON",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized (PUT)",
-                        "schema": {
-                            "type": "string"
                         }
                     },
                     "404": {
-                        "description": "Config not found (GET)",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
+                        "description": "Config not found",
                         "schema": {
                             "type": "string"
                         }
@@ -190,7 +159,15 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "GET returns the full configuration as JSON. PUT replaces it (creates a backup first).",
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the full configuration. Creates a timestamped backup first.",
                 "consumes": [
                     "application/json"
                 ],
@@ -200,12 +177,13 @@ const docTemplate = `{
                 "tags": [
                     "config"
                 ],
-                "summary": "Get or save config",
+                "summary": "Save config",
                 "parameters": [
                     {
-                        "description": "Config object (PUT only)",
+                        "description": "Config object",
                         "name": "body",
                         "in": "body",
+                        "required": true,
                         "schema": {
                             "type": "object"
                         }
@@ -213,9 +191,12 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Config object or {\"status\":\"ok\"}",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "object"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
@@ -225,19 +206,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Unauthorized (PUT)",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Config not found (GET)",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
@@ -293,17 +262,14 @@ const docTemplate = `{
         },
         "/config/raw": {
             "get": {
-                "description": "GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.",
-                "consumes": [
-                    "text/plain"
-                ],
+                "description": "Returns the raw YAML or JSON config file content as plain text",
                 "produces": [
                     "text/plain"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get or replace raw config text",
+                "summary": "Get raw config text",
                 "parameters": [
                     {
                         "enum": [
@@ -324,25 +290,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid format or parse error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized (PUT)",
+                        "description": "Invalid format",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "404": {
                         "description": "Not found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -350,56 +304,54 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.",
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the config with raw YAML or JSON after validation. Creates a backup first.",
                 "consumes": [
                     "text/plain"
                 ],
                 "produces": [
-                    "text/plain"
+                    "application/json"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get or replace raw config text",
+                "summary": "Replace raw config text",
                 "parameters": [
                     {
-                        "enum": [
-                            "yaml",
-                            "json"
-                        ],
-                        "type": "string",
-                        "description": "Format override",
-                        "name": "format",
-                        "in": "query"
+                        "description": "Raw YAML or JSON config",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Raw config text",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid format or parse error",
+                        "description": "Parse error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized (PUT)",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Not found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
@@ -432,14 +384,14 @@ const docTemplate = `{
         },
         "/logo": {
             "get": {
-                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "description": "Serves the custom logo if set, otherwise returns the theme-aware default",
                 "produces": [
                     "image/png"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get, upload or delete logo",
+                "summary": "Get logo",
                 "parameters": [
                     {
                         "enum": [
@@ -447,86 +399,67 @@ const docTemplate = `{
                             "light"
                         ],
                         "type": "string",
-                        "description": "Theme variant (GET only)",
+                        "description": "Theme variant",
                         "name": "theme",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "description": "Logo image",
                         "schema": {
                             "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Missing or invalid file",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "415": {
-                        "description": "Unsupported image type",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
             },
             "post": {
-                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the logo with an uploaded image (PNG, JPEG, SVG, WebP, GIF; max 5 MB)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
                 "produces": [
-                    "image/png"
+                    "application/json"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get, upload or delete logo",
+                "summary": "Upload custom logo",
                 "parameters": [
                     {
-                        "enum": [
-                            "dark",
-                            "light"
-                        ],
-                        "type": "string",
-                        "description": "Theme variant (GET only)",
-                        "name": "theme",
-                        "in": "query"
+                        "type": "file",
+                        "description": "Logo image file",
+                        "name": "logo",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "file"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid file",
+                        "description": "Missing or oversized file",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -540,53 +473,34 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the custom logo, reverting to the default",
                 "produces": [
-                    "image/png"
+                    "application/json"
                 ],
                 "tags": [
                     "config"
                 ],
-                "summary": "Get, upload or delete logo",
-                "parameters": [
-                    {
-                        "enum": [
-                            "dark",
-                            "light"
-                        ],
-                        "type": "string",
-                        "description": "Theme variant (GET only)",
-                        "name": "theme",
-                        "in": "query"
-                    }
-                ],
+                "summary": "Delete custom logo",
                 "responses": {
                     "200": {
-                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Missing or invalid file",
-                        "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "415": {
-                        "description": "Unsupported image type",
                         "schema": {
                             "type": "string"
                         }
@@ -698,54 +612,29 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Returns stored secret key names (values are never exposed)",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "secrets"
                 ],
-                "summary": "Manage secrets",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Secret key to delete (DELETE only)",
-                        "name": "key",
-                        "in": "query"
-                    },
-                    {
-                        "description": "{",
-                        "name": "body",
-                        "in": "body",
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
+                "summary": "List secret keys",
                 "responses": {
                     "200": {
-                        "description": "Key list or {\"status\":\"ok\"}",
+                        "description": "{\"keys\":[\"KEY1\",\"KEY2\"]}",
                         "schema": {
-                            "type": "object"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid body or missing key",
-                        "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -761,7 +650,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
+                "description": "Stores a key-value pair in the secrets file",
                 "consumes": [
                     "application/json"
                 ],
@@ -771,18 +660,13 @@ const docTemplate = `{
                 "tags": [
                     "secrets"
                 ],
-                "summary": "Manage secrets",
+                "summary": "Add or update a secret",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Secret key to delete (DELETE only)",
-                        "name": "key",
-                        "in": "query"
-                    },
                     {
                         "description": "{",
                         "name": "body",
                         "in": "body",
+                        "required": true,
                         "schema": {
                             "type": "object"
                         }
@@ -790,25 +674,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Key list or {\"status\":\"ok\"}",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "object"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid body or missing key",
+                        "description": "Invalid body",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -824,54 +705,41 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Removes a key from the secrets file",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "secrets"
                 ],
-                "summary": "Manage secrets",
+                "summary": "Delete a secret",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Secret key to delete (DELETE only)",
+                        "description": "Secret key to delete",
                         "name": "key",
-                        "in": "query"
-                    },
-                    {
-                        "description": "{",
-                        "name": "body",
-                        "in": "body",
-                        "schema": {
-                            "type": "object"
-                        }
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Key list or {\"status\":\"ok\"}",
+                        "description": "{\"status\":\"ok\"}",
                         "schema": {
-                            "type": "object"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid body or missing key",
+                        "description": "Missing ?key=",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed",
                         "schema": {
                             "type": "string"
                         }

@@ -632,29 +632,45 @@ func authVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-// configHandler godoc
-// @Summary     Get or save config
-// @Description GET returns the full configuration as JSON. PUT replaces it (creates a backup first).
+// configGetHandler godoc
+// @Summary     Get config
+// @Description Returns the full configuration as JSON
 // @Tags        config
 // @Produce     json
-// @Accept      json
-// @Param       body body object false "Config object (PUT only)"
-// @Success     200 {object} object "Config object or {"status":"ok"}"
-// @Failure     400 {string} string "Invalid JSON"
-// @Failure     401 {string} string "Unauthorized (PUT)"
-// @Failure     404 {string} string "Config not found (GET)"
-// @Failure     405 {string} string "Method not allowed"
+// @Success     200 {object} object "Config object"
+// @Failure     404 {string} string "Config not found"
 // @Router      /config [get]
+func configGetHandler(w http.ResponseWriter, r *http.Request) {
+	readConfig(w, r)
+}
+
+// configSaveHandler godoc
+// @Summary     Save config
+// @Description Replaces the full configuration. Creates a timestamped backup first.
+// @Tags        config
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Accept      json
+// @Produce     json
+// @Param       body body object true "Config object"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Invalid JSON"
+// @Failure     401 {string} string "Unauthorized"
 // @Router      /config [put]
+func configSaveHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	writeConfig(w, r)
+}
+
+// configHandler dispatches /config to the method-specific handlers.
 func configHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "GET":
-		readConfig(w, r)
-	case "PUT":
-		if !requireAuth(w, r) {
-			return
-		}
-		writeConfig(w, r)
+	case http.MethodGet:
+		configGetHandler(w, r)
+	case http.MethodPut:
+		configSaveHandler(w, r)
 	default:
 		http.Error(w, "Method not allowed", 405)
 	}
@@ -683,251 +699,326 @@ func configBackupHandler(w http.ResponseWriter, r *http.Request) {
 	backupConfig(w, r)
 }
 
-// configRawHandler godoc
-// @Summary     Get or replace raw config text
-// @Description GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.
+// configRawGetHandler godoc
+// @Summary     Get raw config text
+// @Description Returns the raw YAML or JSON config file content as plain text
 // @Tags        config
 // @Produce     text/plain
-// @Accept      text/plain
 // @Param       format query string false "Format override" Enums(yaml,json)
 // @Success     200 {string} string "Raw config text"
-// @Failure     400 {string} string "Invalid format or parse error"
-// @Failure     401 {string} string "Unauthorized (PUT)"
+// @Failure     400 {string} string "Invalid format"
 // @Failure     404 {string} string "Not found"
-// @Failure     405 {string} string "Method not allowed"
 // @Router      /config/raw [get]
+func configRawGetHandler(w http.ResponseWriter, r *http.Request) {
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = detectFormat()
+	}
+	if !strings.Contains(format, "yaml") && !strings.Contains(format, "json") {
+		http.Error(w, "Invalid format", 400)
+		return
+	}
+	data, err := os.ReadFile(configPath(format))
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write(data)
+}
+
+// configRawSaveHandler godoc
+// @Summary     Replace raw config text
+// @Description Replaces the config with raw YAML or JSON after validation. Creates a backup first.
+// @Tags        config
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Accept      text/plain
+// @Produce     json
+// @Param       body body string true "Raw YAML or JSON config"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Parse error"
+// @Failure     401 {string} string "Unauthorized"
 // @Router      /config/raw [put]
+func configRawSaveHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Read error", 400)
+		return
+	}
+	// Parse raw YAML or JSON into a generic value to validate it
+	var parsed interface{}
+	ct := r.Header.Get("Content-Type")
+	if strings.Contains(ct, "json") {
+		err = json.Unmarshal(body, &parsed)
+	} else {
+		err = yaml.Unmarshal(body, &parsed)
+	}
+	if err != nil {
+		http.Error(w, "Parse error: "+err.Error(), 400)
+		return
+	}
+	format := detectFormat()
+	existing, _ := os.ReadFile(configPath(format))
+	if existing != nil {
+		backupPath := fmt.Sprintf("%s/config.backup.%d.%s", configDir, time.Now().Unix(), format)
+		os.WriteFile(backupPath, existing, 0644)
+	}
+	var out []byte
+	if format == "yaml" {
+		out, err = yaml.Marshal(parsed)
+	} else {
+		out, err = json.MarshalIndent(parsed, "", "  ")
+	}
+	if err != nil {
+		http.Error(w, "Marshal error: "+err.Error(), 500)
+		return
+	}
+	if err := os.WriteFile(configPath(format), out, 0644); err != nil {
+		http.Error(w, "Write error: "+err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// configRawHandler dispatches /config/raw to the method-specific handlers.
 func configRawHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		format := r.URL.Query().Get("format")
-		if format == "" {
-			format = detectFormat()
-		}
-		if !strings.Contains(format, "yaml") && !strings.Contains(format, "json") {
-			http.Error(w, "Invalid format", 400)
-			return
-		}
-		data, err := os.ReadFile(configPath(format))
-		if err != nil {
-			http.Error(w, "Not found", 404)
-			return
-		}
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write(data)
-
+		configRawGetHandler(w, r)
 	case http.MethodPut:
-		if !requireAuth(w, r) {
-			return
-		}
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Read error", 400)
-			return
-		}
-		// Parse raw YAML or JSON into a generic value to validate it
-		var parsed interface{}
-		ct := r.Header.Get("Content-Type")
-		if strings.Contains(ct, "json") {
-			err = json.Unmarshal(body, &parsed)
-		} else {
-			err = yaml.Unmarshal(body, &parsed)
-		}
-		if err != nil {
-			http.Error(w, "Parse error: "+err.Error(), 400)
-			return
-		}
-		format := detectFormat()
-		existing, _ := os.ReadFile(configPath(format))
-		if existing != nil {
-			backupPath := fmt.Sprintf("%s/config.backup.%d.%s", configDir, time.Now().Unix(), format)
-			os.WriteFile(backupPath, existing, 0644)
-		}
-		var out []byte
-		if format == "yaml" {
-			out, err = yaml.Marshal(parsed)
-		} else {
-			out, err = json.MarshalIndent(parsed, "", "  ")
-		}
-		if err != nil {
-			http.Error(w, "Marshal error: "+err.Error(), 500)
-			return
-		}
-		if err := os.WriteFile(configPath(format), out, 0644); err != nil {
-			http.Error(w, "Write error: "+err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-
+		configRawSaveHandler(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// logoHandler godoc
-// @Summary     Get, upload or delete logo
-// @Description GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.
+// logoGetHandler godoc
+// @Summary     Get logo
+// @Description Serves the custom logo if set, otherwise returns the theme-aware default
 // @Tags        config
-// @Param       theme query string false "Theme variant (GET only)" Enums(dark,light)
+// @Param       theme query string false "Theme variant" Enums(dark,light)
 // @Produce     image/png
-// @Success     200 {file} binary "Logo image or {"status":"ok"}"
-// @Failure     400 {string} string "Missing or invalid file"
-// @Failure     401 {string} string "Unauthorized"
-// @Failure     405 {string} string "Method not allowed"
-// @Failure     415 {string} string "Unsupported image type"
+// @Success     200 {file} binary "Logo image"
 // @Router      /logo [get]
+func logoGetHandler(w http.ResponseWriter, r *http.Request) {
+	customLogo := filepath.Join(configDir, "logo.png")
+	if _, err := os.Stat(customLogo); err == nil {
+		http.ServeFile(w, r, customLogo)
+		return
+	}
+	// Use a fixed map so user input never touches the path directly.
+	themedLogos := map[string]string{
+		"dark":  "/usr/share/nginx/html/logo-dark.png",
+		"light": "/usr/share/nginx/html/logo-light.png",
+	}
+	themedLogo, ok := themedLogos[r.URL.Query().Get("theme")]
+	if !ok {
+		themedLogo = themedLogos["dark"]
+	}
+	if _, err := os.Stat(themedLogo); err == nil {
+		http.ServeFile(w, r, themedLogo)
+		return
+	}
+	http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
+}
+
+// logoUploadHandler godoc
+// @Summary     Upload custom logo
+// @Description Replaces the logo with an uploaded image (PNG, JPEG, SVG, WebP, GIF; max 5 MB)
+// @Tags        config
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Accept      multipart/form-data
+// @Produce     json
+// @Param       logo formData file true "Logo image file"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Missing or oversized file"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     415 {string} string "Unsupported image type"
 // @Router      /logo [post]
+func logoUploadHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		http.Error(w, "File too large (max 5MB)", 400)
+		return
+	}
+	file, header, err := r.FormFile("logo")
+	if err != nil {
+		http.Error(w, "Missing file field 'logo'", 400)
+		return
+	}
+	defer file.Close()
+	ct := header.Header.Get("Content-Type")
+	allowed := map[string]bool{"image/png": true, "image/jpeg": true, "image/svg+xml": true, "image/webp": true, "image/gif": true}
+	if !allowed[ct] {
+		// Fallback: check first 512 bytes
+		buf := make([]byte, 512)
+		n, _ := file.Read(buf)
+		detected := http.DetectContentType(buf[:n])
+		if !allowed[detected] {
+			http.Error(w, "Unsupported image type", 415)
+			return
+		}
+		// Seek back to start
+		if seeker, ok := file.(io.Seeker); ok {
+			seeker.Seek(0, io.SeekStart)
+		}
+	}
+	dst, err := os.OpenFile(filepath.Join(configDir, "logo.png"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		http.Error(w, "Write error: "+err.Error(), 500)
+		return
+	}
+	_, copyErr := io.Copy(dst, file)
+	closeErr := dst.Close()
+	if copyErr != nil {
+		http.Error(w, "Write error: "+copyErr.Error(), 500)
+		return
+	}
+	if closeErr != nil {
+		http.Error(w, "Write error: "+closeErr.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// logoDeleteHandler godoc
+// @Summary     Delete custom logo
+// @Description Removes the custom logo, reverting to the default
+// @Tags        config
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     json
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     401 {string} string "Unauthorized"
 // @Router      /logo [delete]
+func logoDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	customLogo := filepath.Join(configDir, "logo.png")
+	if err := os.Remove(customLogo); err != nil && !os.IsNotExist(err) {
+		http.Error(w, "Delete error: "+err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// logoHandler dispatches /logo to the method-specific handlers.
 func logoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		customLogo := filepath.Join(configDir, "logo.png")
-		if _, err := os.Stat(customLogo); err == nil {
-			http.ServeFile(w, r, customLogo)
-			return
-		}
-		// Use a fixed map so user input never touches the path directly.
-		themedLogos := map[string]string{
-			"dark":  "/usr/share/nginx/html/logo-dark.png",
-			"light": "/usr/share/nginx/html/logo-light.png",
-		}
-		themedLogo, ok := themedLogos[r.URL.Query().Get("theme")]
-		if !ok {
-			themedLogo = themedLogos["dark"]
-		}
-		if _, err := os.Stat(themedLogo); err == nil {
-			http.ServeFile(w, r, themedLogo)
-			return
-		}
-		http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
+		logoGetHandler(w, r)
 	case http.MethodPost:
-		if !requireAuth(w, r) {
-			return
-		}
-		if err := r.ParseMultipartForm(5 << 20); err != nil {
-			http.Error(w, "File too large (max 5MB)", 400)
-			return
-		}
-		file, header, err := r.FormFile("logo")
-		if err != nil {
-			http.Error(w, "Missing file field 'logo'", 400)
-			return
-		}
-		defer file.Close()
-		ct := header.Header.Get("Content-Type")
-		allowed := map[string]bool{"image/png": true, "image/jpeg": true, "image/svg+xml": true, "image/webp": true, "image/gif": true}
-		if !allowed[ct] {
-			// Fallback: check first 512 bytes
-			buf := make([]byte, 512)
-			n, _ := file.Read(buf)
-			detected := http.DetectContentType(buf[:n])
-			if !allowed[detected] {
-				http.Error(w, "Unsupported image type", 415)
-				return
-			}
-			// Seek back to start
-			if seeker, ok := file.(io.Seeker); ok {
-				seeker.Seek(0, io.SeekStart)
-			}
-		}
-		dst, err := os.OpenFile(filepath.Join(configDir, "logo.png"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			http.Error(w, "Write error: "+err.Error(), 500)
-			return
-		}
-		_, copyErr := io.Copy(dst, file)
-		closeErr := dst.Close()
-		if copyErr != nil {
-			http.Error(w, "Write error: "+copyErr.Error(), 500)
-			return
-		}
-		if closeErr != nil {
-			http.Error(w, "Write error: "+closeErr.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		logoUploadHandler(w, r)
 	case http.MethodDelete:
-		if !requireAuth(w, r) {
-			return
-		}
-		customLogo := filepath.Join(configDir, "logo.png")
-		if err := os.Remove(customLogo); err != nil && !os.IsNotExist(err) {
-			http.Error(w, "Delete error: "+err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		logoDeleteHandler(w, r)
 	default:
 		http.Error(w, "Method not allowed", 405)
 	}
 }
 
-// secretsHandler godoc
-// @Summary     Manage secrets
-// @Description GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.
+// secretsListHandler godoc
+// @Summary     List secret keys
+// @Description Returns stored secret key names (values are never exposed)
 // @Tags        secrets
 // @Security    HiveToken
 // @Security    BearerAuth
 // @Produce     json
-// @Accept      json
-// @Param       key  query  string false "Secret key to delete (DELETE only)"
-// @Param       body body   object false "{"key":"...", "value":"..."} (PUT only)"
-// @Success     200 {object} object "Key list or {"status":"ok"}"
-// @Failure     400 {string} string "Invalid body or missing key"
+// @Success     200 {object} map[string][]string "{"keys":["KEY1","KEY2"]}"
 // @Failure     401 {string} string "Unauthorized"
-// @Failure     405 {string} string "Method not allowed"
 // @Router      /secrets [get]
+func secretsListHandler(w http.ResponseWriter, r *http.Request) {
+	s := loadSecrets()
+	keys := make([]string, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"keys": keys})
+}
+
+// secretsUpsertHandler godoc
+// @Summary     Add or update a secret
+// @Description Stores a key-value pair in the secrets file
+// @Tags        secrets
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Accept      json
+// @Produce     json
+// @Param       body body object true "{"key":"MY_KEY","value":"my_value"}"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Invalid body"
+// @Failure     401 {string} string "Unauthorized"
 // @Router      /secrets [put]
+func secretsUpsertHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Key == "" {
+		http.Error(w, "Invalid body: key and value required", 400)
+		return
+	}
+	s := loadSecrets()
+	s[body.Key] = body.Value
+	if err := saveSecrets(s); err != nil {
+		http.Error(w, "Write error: "+err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// secretsDeleteKeyHandler godoc
+// @Summary     Delete a secret
+// @Description Removes a key from the secrets file
+// @Tags        secrets
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     json
+// @Param       key query string true "Secret key to delete"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Missing ?key="
+// @Failure     401 {string} string "Unauthorized"
 // @Router      /secrets [delete]
+func secretsDeleteKeyHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		http.Error(w, "Missing ?key=", 400)
+		return
+	}
+	s := loadSecrets()
+	delete(s, key)
+	if err := saveSecrets(s); err != nil {
+		http.Error(w, "Write error: "+err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// secretsHandler dispatches /secrets to the method-specific handlers.
 func secretsHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireAuth(w, r) {
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
-		s := loadSecrets()
-		keys := make([]string, 0, len(s))
-		for k := range s {
-			keys = append(keys, k)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"keys": keys})
-
+		secretsListHandler(w, r)
 	case http.MethodPut:
-		var body struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Key == "" {
-			http.Error(w, "Invalid body: key and value required", 400)
-			return
-		}
-		s := loadSecrets()
-		s[body.Key] = body.Value
-		if err := saveSecrets(s); err != nil {
-			http.Error(w, "Write error: "+err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-
+		secretsUpsertHandler(w, r)
 	case http.MethodDelete:
-		key := r.URL.Query().Get("key")
-		if key == "" {
-			http.Error(w, "Missing ?key=", 400)
-			return
-		}
-		s := loadSecrets()
-		delete(s, key)
-		if err := saveSecrets(s); err != nil {
-			http.Error(w, "Write error: "+err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-
+		secretsDeleteKeyHandler(w, r)
 	default:
 		http.Error(w, "Method not allowed", 405)
 	}
