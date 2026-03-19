@@ -1746,7 +1746,7 @@ export default function App() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [columns, setColumns] = useState(() => {
-    const v = parseInt(localStorage.getItem('hive_columns'))
+    const v = parseInt(localStorage.getItem('hive_columns'), 10)
     return (v >= 1 && v <= 3) ? v : 2
   })
   const [theme, setTheme] = useState(() => localStorage.getItem('hive-theme') || 'dark')
@@ -1823,7 +1823,7 @@ export default function App() {
     setColumns(next)
     localStorage.setItem('hive_columns', next)
     if (isUnlocked) {
-      authSave({ ...config, settings: { ...config.settings, columns: next } })
+      authSave({ ...config, settings: { ...config.settings, columns: next } }).catch(() => {})
     }
   }
 
@@ -1842,7 +1842,7 @@ export default function App() {
       setColumns(clamped)
       localStorage.setItem('hive_columns', clamped)
     }
-  }, [loading])
+  }, [loading, config])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontFamily: 'system-ui' }}>
@@ -2104,9 +2104,9 @@ export default function App() {
           title={`${columns} column${columns > 1 ? 's' : ''} (click to change)`}
           style={{ padding: '6px 8px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 7, color: 'var(--color-text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
-          {columns === 1 && <LucideIcons.LayoutList size={16} />}
-          {columns === 2 && <LucideIcons.LayoutGrid size={16} />}
-          {columns === 3 && <LucideIcons.Grid3x3 size={16} />}
+          {columns === 1 ? <LucideIcons.LayoutList size={16} /> :
+           columns === 3 ? <LucideIcons.Grid3x3 size={16} /> :
+           <LucideIcons.LayoutGrid size={16} />}
         </button>
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
