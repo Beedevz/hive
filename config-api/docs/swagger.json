@@ -13,7 +13,6 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:3001",
     "basePath": "/api",
     "paths": {
         "/adapters-catalog": {

@@ -5,7 +5,6 @@
 // @contact.url     https://github.com/beedevz/hive
 // @license.name    MIT
 // @license.url     https://opensource.org/licenses/MIT
-// @host            localhost:3001
 // @BasePath        /api
 // @securityDefinitions.apikey BearerAuth
 // @in header

@@ -34,7 +34,6 @@ definitions:
       ram:
         $ref: '#/definitions/main.ramInfo'
     type: object
-host: localhost:3001
 info:
   contact:
     name: Beedevz
