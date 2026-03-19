@@ -7,6 +7,40 @@ import { SortableContext, useSortable, rectSortingStrategy, horizontalListSortin
 import { CSS } from '@dnd-kit/utilities'
 import * as LucideIcons from 'lucide-react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import {
+  faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
+  faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
+  faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacking,
+  faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
+  faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
+  faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
+  faHouse, faLightbulb, faTemperatureHalf, faPowerOff, faPlug, faSolarPanel,
+  faGear, faGears, faWrench, faScrewdriverWrench, faTerminal, faCode,
+  faBug, faFire, faStar, faHeart, faBookmark,
+} from '@fortawesome/free-solid-svg-icons'
+import {
+  faBookmark as farBookmark, faHardDrive as farHardDrive,
+} from '@fortawesome/free-regular-svg-icons'
+import {
+  faGithub, faGitlab, faDocker,
+} from '@fortawesome/free-brands-svg-icons'
+
+library.add(
+  faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
+  faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
+  faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacking,
+  faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
+  faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
+  faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
+  faHouse, faLightbulb, faTemperatureHalf, faPowerOff, faPlug, faSolarPanel,
+  faGear, faGears, faWrench, faScrewdriverWrench, faTerminal, faCode,
+  faBug, faFire, faStar, faHeart, faBookmark,
+  farBookmark, farHardDrive,
+  faGithub, faGitlab, faDocker,
+)
 
 // ─── Icon helper ──────────────────────────────────────────────────
 // Renders a URL as <img> or falls back to emoji/text.
@@ -764,6 +798,82 @@ const ICON_LIST = [
   ['speedtest-tracker','Speedtest'],
 ].map(([slug, name]) => ({ slug, name, url: SI + slug + '.svg' }))
 
+// ─── Font Awesome curated icon list (~63 icons, all named in spec) ───────────
+const FA_ICON_LIST = [
+  // Infrastructure
+  { prefix: 'fas', name: 'server', label: 'server' },
+  { prefix: 'fas', name: 'database', label: 'database' },
+  { prefix: 'fas', name: 'network-wired', label: 'network-wired' },
+  { prefix: 'fas', name: 'cloud', label: 'cloud' },
+  { prefix: 'fas', name: 'cube', label: 'cube' },
+  { prefix: 'fas', name: 'layer-group', label: 'layer-group' },
+  { prefix: 'fas', name: 'microchip', label: 'microchip' },
+  // Monitoring
+  { prefix: 'fas', name: 'chart-line', label: 'chart-line' },
+  { prefix: 'fas', name: 'chart-bar', label: 'chart-bar' },
+  { prefix: 'fas', name: 'gauge', label: 'gauge' },
+  { prefix: 'fas', name: 'bell', label: 'bell' },
+  { prefix: 'fas', name: 'eye', label: 'eye' },
+  { prefix: 'fas', name: 'triangle-exclamation', label: 'triangle-exclamation' },
+  { prefix: 'fas', name: 'circle-check', label: 'circle-check' },
+  // Media
+  { prefix: 'fas', name: 'film', label: 'film' },
+  { prefix: 'fas', name: 'music', label: 'music' },
+  { prefix: 'fas', name: 'tv', label: 'tv' },
+  { prefix: 'fas', name: 'photo-film', label: 'photo-film' },
+  { prefix: 'fas', name: 'headphones', label: 'headphones' },
+  { prefix: 'fas', name: 'play', label: 'play' },
+  { prefix: 'fas', name: 'video', label: 'video' },
+  // Downloads
+  { prefix: 'fas', name: 'download', label: 'download' },
+  { prefix: 'fas', name: 'arrow-down', label: 'arrow-down' },
+  { prefix: 'fas', name: 'file-arrow-down', label: 'file-arrow-down' },
+  { prefix: 'fas', name: 'magnet', label: 'magnet' },
+  { prefix: 'fas', name: 'boxes-stacking', label: 'boxes-stacking' },
+  // Storage
+  { prefix: 'fas', name: 'hard-drive', label: 'hard-drive' },
+  { prefix: 'fas', name: 'floppy-disk', label: 'floppy-disk' },
+  { prefix: 'fas', name: 'box', label: 'box' },
+  { prefix: 'fas', name: 'folder', label: 'folder' },
+  { prefix: 'fas', name: 'folder-open', label: 'folder-open' },
+  { prefix: 'fas', name: 'archive', label: 'archive' },
+  // Security
+  { prefix: 'fas', name: 'shield', label: 'shield' },
+  { prefix: 'fas', name: 'shield-halved', label: 'shield-halved' },
+  { prefix: 'fas', name: 'lock', label: 'lock' },
+  { prefix: 'fas', name: 'key', label: 'key' },
+  { prefix: 'fas', name: 'user-shield', label: 'user-shield' },
+  { prefix: 'fas', name: 'fingerprint', label: 'fingerprint' },
+  // Network
+  { prefix: 'fas', name: 'wifi', label: 'wifi' },
+  { prefix: 'fas', name: 'globe', label: 'globe' },
+  { prefix: 'fas', name: 'link', label: 'link' },
+  { prefix: 'fas', name: 'satellite-dish', label: 'satellite-dish' },
+  { prefix: 'fas', name: 'tower-broadcast', label: 'tower-broadcast' },
+  { prefix: 'fab', name: 'github', label: 'github' },
+  { prefix: 'fab', name: 'gitlab', label: 'gitlab' },
+  { prefix: 'fab', name: 'docker', label: 'docker' },
+  // Home & IoT
+  { prefix: 'fas', name: 'house', label: 'house' },
+  { prefix: 'fas', name: 'lightbulb', label: 'lightbulb' },
+  { prefix: 'fas', name: 'temperature-half', label: 'temperature-half' },
+  { prefix: 'fas', name: 'power-off', label: 'power-off' },
+  { prefix: 'fas', name: 'plug', label: 'plug' },
+  { prefix: 'fas', name: 'solar-panel', label: 'solar-panel' },
+  // General
+  { prefix: 'fas', name: 'gear', label: 'gear' },
+  { prefix: 'fas', name: 'gears', label: 'gears' },
+  { prefix: 'fas', name: 'wrench', label: 'wrench' },
+  { prefix: 'fas', name: 'screwdriver-wrench', label: 'screwdriver-wrench' },
+  { prefix: 'fas', name: 'terminal', label: 'terminal' },
+  { prefix: 'fas', name: 'code', label: 'code' },
+  { prefix: 'fas', name: 'bug', label: 'bug' },
+  { prefix: 'fas', name: 'fire', label: 'fire' },
+  { prefix: 'fas', name: 'star', label: 'star' },
+  { prefix: 'fas', name: 'heart', label: 'heart' },
+  { prefix: 'fas', name: 'bookmark', label: 'bookmark' },
+]
+
 function IconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -802,6 +912,162 @@ function IconPicker({ value, onChange }) {
             ))}
           </div>
           {filtered.length === 0 && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Unified Icon Picker (selfh.st + Lucide + Font Awesome) ───────
+function UnifiedIconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [source, setSource] = useState(null) // null | 'selfhst' | 'lucide' | 'fa'
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  // Close on click-outside or Escape
+  useEffect(() => {
+    if (!open) return
+    const onMouse = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setSource(null) } }
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); setSource(null) } }
+    document.addEventListener('mousedown', onMouse)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onMouse); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  const handleOpen = () => { setOpen(o => !o); setSource(null); setSearch('') }
+  const handleBack = () => { setSource(null); setSearch('') }
+  const handleSelect = (val) => { onChange(val); setOpen(false); setSource(null); setSearch('') }
+
+  const popupStyle = {
+    position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-strong)',
+    borderRadius: 12, padding: 10, width: 300, zIndex: 300,
+    display: 'flex', flexDirection: 'column', gap: 8,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+  }
+  const btnStyle = (active) => ({
+    flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+    border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+    background: active ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)',
+    color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+  })
+  const searchStyle = {
+    padding: '6px 10px', background: 'var(--color-overlay-md)',
+    border: '1px solid var(--color-border)', borderRadius: 7,
+    color: 'var(--color-text-bright)', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%',
+  }
+  const backBtn = (
+    <button type="button" onClick={handleBack}
+      style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 11 }}>
+      ← Back
+    </button>
+  )
+
+  // selfh.st grid
+  const selfhstFiltered = ICON_LIST.filter(i =>
+    i.name.toLowerCase().includes(search.toLowerCase()) ||
+    i.slug.toLowerCase().includes(search.toLowerCase())
+  )
+  // Lucide grid
+  const lucideFiltered = LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+  // FA grid
+  const faFiltered = FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" onClick={handleOpen} title="Browse icons"
+        style={{ padding: '6px 8px', background: open ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)', border: `1px solid ${open ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 7, color: 'var(--color-accent-light)', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        🔍
+      </button>
+
+      {open && (
+        <div style={popupStyle}>
+          {/* Source selection screen */}
+          {!source && (
+            <>
+              <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 2 }}>Choose icon source</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('selfhst'); setSearch('') }}>
+                  <span style={{ fontSize: 18 }}>🖼️</span>selfh.st
+                </button>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('lucide'); setSearch('') }}>
+                  <LucideIcons.Shapes size={18} />Lucide
+                </button>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('fa'); setSearch('') }}>
+                  <span style={{ fontSize: 16 }}>󰇠</span>Font Awesome
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* selfh.st screen */}
+          {source === 'selfhst' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {selfhstFiltered.map(icon => (
+                  <button key={icon.slug} type="button" title={icon.name} onClick={() => handleSelect(icon.url)}
+                    style={{ padding: 6, background: value === icon.url ? 'var(--color-accent-bg-lg)' : 'none', border: `1px solid ${value === icon.url ? 'var(--color-accent)' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={icon.url} alt={icon.name} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.opacity = '0.2' }} />
+                  </button>
+                ))}
+                {selfhstFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
+
+          {/* Lucide screen */}
+          {source === 'lucide' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {lucideFiltered.map(name => {
+                  const LIcon = LucideIcons[name]
+                  if (!LIcon) return null
+                  const val = `lucide:${name}`
+                  const isSelected = value === val
+                  return (
+                    <button key={name} type="button" title={name} onClick={() => handleSelect(val)}
+                      style={{ padding: 7, borderRadius: 7, border: `1px solid ${isSelected ? 'var(--color-accent)' : 'transparent'}`, background: isSelected ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSelected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)' }}>
+                      <LIcon size={16} strokeWidth={1.75} />
+                    </button>
+                  )
+                })}
+                {lucideFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
+
+          {/* Font Awesome screen */}
+          {source === 'fa' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {faFiltered.map(icon => {
+                  const val = `fa:${icon.prefix === 'fas' ? 'solid' : icon.prefix === 'far' ? 'regular' : 'brands'}/${icon.name}`
+                  const isSelected = value === val
+                  return (
+                    <button key={val} type="button" title={icon.label} onClick={() => handleSelect(val)}
+                      style={{ padding: 7, borderRadius: 7, border: `1px solid ${isSelected ? 'var(--color-accent)' : 'transparent'}`, background: isSelected ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSelected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)' }}>
+                      <FontAwesomeIcon icon={[icon.prefix, icon.name]} style={{ width: 16, height: 16 }} />
+                    </button>
+                  )
+                })}
+                {faFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
