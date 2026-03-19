@@ -1740,7 +1740,7 @@ export default function App() {
       {/* Top-left logo */}
       <div className={`fade ${visible ? 'show' : ''}`} style={{ position: 'fixed', top: 16, left: 20, zIndex: 50 }}>
         <div style={{ position: 'relative' }}>
-          <img src={`/api/logo?v=${logoVer}&theme=${theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme}`} alt="Hive" style={{ height: 48, width: 'auto', objectFit: 'contain' }} />
+          <img src={`/api/logo?v=${logoVer}&theme=${theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme}`} alt="Hive" style={{ height: 80, width: 'auto', objectFit: 'contain' }} />
           {isUnlocked && (
             <>
               <label title="Upload logo" style={{
