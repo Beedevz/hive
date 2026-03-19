@@ -608,6 +608,19 @@ func main() {
 				http.ServeFile(w, r, customLogo)
 				return
 			}
+			// Use a fixed map so user input never touches the path directly.
+			themedLogos := map[string]string{
+				"dark":  "/usr/share/nginx/html/logo-dark.png",
+				"light": "/usr/share/nginx/html/logo-light.png",
+			}
+			themedLogo, ok := themedLogos[r.URL.Query().Get("theme")]
+			if !ok {
+				themedLogo = themedLogos["dark"]
+			}
+			if _, err := os.Stat(themedLogo); err == nil {
+				http.ServeFile(w, r, themedLogo)
+				return
+			}
 			http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
 		case http.MethodPost:
 			if !requireAuth(w, r) {
