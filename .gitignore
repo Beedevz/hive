@@ -40,5 +40,8 @@ CLAUDE.md
 DEVELOPMENT.md
 export_vultrdns.py
 
+# Local planning docs (superpowers specs/plans)
+docs/superpowers/
+
 # OS specific
 .DS_Store
