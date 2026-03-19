@@ -6,14 +6,76 @@ import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSe
 import { SortableContext, useSortable, rectSortingStrategy, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import * as LucideIcons from 'lucide-react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import {
+  faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
+  faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
+  faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacked,
+  faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
+  faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
+  faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
+  faHouse, faLightbulb, faTemperatureHalf, faPowerOff, faPlug, faSolarPanel,
+  faGear, faGears, faWrench, faScrewdriverWrench, faTerminal, faCode,
+  faBug, faFire, faStar, faHeart, faBookmark,
+} from '@fortawesome/free-solid-svg-icons'
+import {
+  faBookmark as farBookmark, faHardDrive as farHardDrive,
+} from '@fortawesome/free-regular-svg-icons'
+import {
+  faGithub, faGitlab, faDocker,
+} from '@fortawesome/free-brands-svg-icons'
+
+library.add(
+  faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
+  faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
+  faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacked,
+  faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
+  faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
+  faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
+  faHouse, faLightbulb, faTemperatureHalf, faPowerOff, faPlug, faSolarPanel,
+  faGear, faGears, faWrench, faScrewdriverWrench, faTerminal, faCode,
+  faBug, faFire, faStar, faHeart, faBookmark,
+  farBookmark, farHardDrive,
+  faGithub, faGitlab, faDocker,
+)
 
 // ─── Icon helper ──────────────────────────────────────────────────
 // Renders a URL as <img> or falls back to emoji/text.
 function renderIcon(icon, fallback, size = 24) {
-  const val = icon || fallback || ''
+  const val = icon || ''
+
+  if (val.startsWith('lucide:')) {
+    const name = val.slice(7)
+    const LIcon = LucideIcons[name]
+    if (LIcon) return <LIcon size={size} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+    return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+  }
+
+  if (val.startsWith('fa:')) {
+    // format: fa:solid/server or fa:regular/bookmark or fa:brands/github
+    const parts = val.slice(3).split('/')
+    if (parts.length === 2) {
+      const prefixMap = { solid: 'fas', regular: 'far', brands: 'fab' }
+      const prefix = prefixMap[parts[0]]
+      const iconName = parts[1]
+      if (prefix) {
+        try {
+          return <FontAwesomeIcon icon={[prefix, iconName]} style={{ width: size, height: size, flexShrink: 0 }} />
+        } catch {
+          return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+        }
+      }
+    }
+    return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+  }
+
   if (val.startsWith('http') || val.startsWith('/')) {
     return <img src={val} alt="" style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
   }
+
   return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{val || fallback}</span>
 }
 
@@ -591,7 +653,7 @@ function BookmarkModal({ bookmark, onSave, onClose }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} placeholder="auto"
               style={{ flex: 1, padding: '8px 12px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 8, color: 'var(--color-text-bright)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
-            <IconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
+            <UnifiedIconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
             <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--color-overlay-md3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {form.icon ? renderIcon(form.icon, '🔖', 22) : <FaviconIcon url={form.url} size={22} />}
             </div>
@@ -736,6 +798,84 @@ const ICON_LIST = [
   ['speedtest-tracker','Speedtest'],
 ].map(([slug, name]) => ({ slug, name, url: SI + slug + '.svg' }))
 
+// ─── Font Awesome curated icon list (~63 icons, all named in spec) ───────────
+const FA_ICON_LIST = [
+  // Infrastructure
+  { prefix: 'fas', name: 'server', label: 'server' },
+  { prefix: 'fas', name: 'database', label: 'database' },
+  { prefix: 'fas', name: 'network-wired', label: 'network-wired' },
+  { prefix: 'fas', name: 'cloud', label: 'cloud' },
+  { prefix: 'fas', name: 'cube', label: 'cube' },
+  { prefix: 'fas', name: 'layer-group', label: 'layer-group' },
+  { prefix: 'fas', name: 'microchip', label: 'microchip' },
+  // Monitoring
+  { prefix: 'fas', name: 'chart-line', label: 'chart-line' },
+  { prefix: 'fas', name: 'chart-bar', label: 'chart-bar' },
+  { prefix: 'fas', name: 'gauge', label: 'gauge' },
+  { prefix: 'fas', name: 'bell', label: 'bell' },
+  { prefix: 'fas', name: 'eye', label: 'eye' },
+  { prefix: 'fas', name: 'triangle-exclamation', label: 'triangle-exclamation' },
+  { prefix: 'fas', name: 'circle-check', label: 'circle-check' },
+  // Media
+  { prefix: 'fas', name: 'film', label: 'film' },
+  { prefix: 'fas', name: 'music', label: 'music' },
+  { prefix: 'fas', name: 'tv', label: 'tv' },
+  { prefix: 'fas', name: 'photo-film', label: 'photo-film' },
+  { prefix: 'fas', name: 'headphones', label: 'headphones' },
+  { prefix: 'fas', name: 'play', label: 'play' },
+  { prefix: 'fas', name: 'video', label: 'video' },
+  // Downloads
+  { prefix: 'fas', name: 'download', label: 'download' },
+  { prefix: 'fas', name: 'arrow-down', label: 'arrow-down' },
+  { prefix: 'fas', name: 'file-arrow-down', label: 'file-arrow-down' },
+  { prefix: 'fas', name: 'magnet', label: 'magnet' },
+  { prefix: 'fas', name: 'boxes-stacking', label: 'boxes-stacking' },
+  // Storage
+  { prefix: 'fas', name: 'hard-drive', label: 'hard-drive' },
+  { prefix: 'fas', name: 'floppy-disk', label: 'floppy-disk' },
+  { prefix: 'fas', name: 'box', label: 'box' },
+  { prefix: 'fas', name: 'folder', label: 'folder' },
+  { prefix: 'fas', name: 'folder-open', label: 'folder-open' },
+  { prefix: 'fas', name: 'archive', label: 'archive' },
+  // Security
+  { prefix: 'fas', name: 'shield', label: 'shield' },
+  { prefix: 'fas', name: 'shield-halved', label: 'shield-halved' },
+  { prefix: 'fas', name: 'lock', label: 'lock' },
+  { prefix: 'fas', name: 'key', label: 'key' },
+  { prefix: 'fas', name: 'user-shield', label: 'user-shield' },
+  { prefix: 'fas', name: 'fingerprint', label: 'fingerprint' },
+  // Network
+  { prefix: 'fas', name: 'wifi', label: 'wifi' },
+  { prefix: 'fas', name: 'globe', label: 'globe' },
+  { prefix: 'fas', name: 'link', label: 'link' },
+  { prefix: 'fas', name: 'satellite-dish', label: 'satellite-dish' },
+  { prefix: 'fas', name: 'tower-broadcast', label: 'tower-broadcast' },
+  { prefix: 'fab', name: 'github', label: 'github' },
+  { prefix: 'fab', name: 'gitlab', label: 'gitlab' },
+  { prefix: 'fab', name: 'docker', label: 'docker' },
+  // Home & IoT
+  { prefix: 'fas', name: 'house', label: 'house' },
+  { prefix: 'fas', name: 'lightbulb', label: 'lightbulb' },
+  { prefix: 'fas', name: 'temperature-half', label: 'temperature-half' },
+  { prefix: 'fas', name: 'power-off', label: 'power-off' },
+  { prefix: 'fas', name: 'plug', label: 'plug' },
+  { prefix: 'fas', name: 'solar-panel', label: 'solar-panel' },
+  // General
+  { prefix: 'fas', name: 'gear', label: 'gear' },
+  { prefix: 'fas', name: 'gears', label: 'gears' },
+  { prefix: 'fas', name: 'wrench', label: 'wrench' },
+  { prefix: 'fas', name: 'screwdriver-wrench', label: 'screwdriver-wrench' },
+  { prefix: 'fas', name: 'terminal', label: 'terminal' },
+  { prefix: 'fas', name: 'code', label: 'code' },
+  { prefix: 'fas', name: 'bug', label: 'bug' },
+  { prefix: 'fas', name: 'fire', label: 'fire' },
+  { prefix: 'fas', name: 'star', label: 'star' },
+  { prefix: 'fas', name: 'heart', label: 'heart' },
+  { prefix: 'fas', name: 'bookmark', label: 'bookmark' },
+  { prefix: 'far', name: 'bookmark', label: 'bookmark (outline)' },
+  { prefix: 'far', name: 'hard-drive', label: 'hard-drive (outline)' },
+]
+
 function IconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -774,6 +914,168 @@ function IconPicker({ value, onChange }) {
             ))}
           </div>
           {filtered.length === 0 && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Unified Icon Picker (selfh.st + Lucide + Font Awesome) ───────
+function UnifiedIconPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [source, setSource] = useState(null) // null | 'selfhst' | 'lucide' | 'fa'
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  // Close on click-outside or Escape
+  useEffect(() => {
+    if (!open) return
+    const onMouse = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setSource(null) } }
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); setSource(null) } }
+    document.addEventListener('mousedown', onMouse)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onMouse); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  const handleOpen = () => { setOpen(o => !o); setSource(null); setSearch('') }
+  const handleBack = () => { setSource(null); setSearch('') }
+  const handleSelect = (val) => { onChange(val); setOpen(false); setSource(null); setSearch('') }
+
+  const popupStyle = {
+    position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-strong)',
+    borderRadius: 12, padding: 10, width: 300, zIndex: 300,
+    display: 'flex', flexDirection: 'column', gap: 8,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+  }
+  const btnStyle = (active) => ({
+    flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+    border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+    background: active ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)',
+    color: active ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+  })
+  const searchStyle = {
+    padding: '6px 10px', background: 'var(--color-overlay-md)',
+    border: '1px solid var(--color-border)', borderRadius: 7,
+    color: 'var(--color-text-bright)', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%',
+  }
+  const backBtn = (
+    <button type="button" onClick={handleBack}
+      style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 11 }}>
+      ← Back
+    </button>
+  )
+
+  // selfh.st grid — only compute when active
+  const selfhstFiltered = source === 'selfhst'
+    ? ICON_LIST.filter(i =>
+        i.name.toLowerCase().includes(search.toLowerCase()) ||
+        i.slug.toLowerCase().includes(search.toLowerCase())
+      )
+    : []
+  // Lucide grid — only compute when active
+  const lucideFiltered = source === 'lucide'
+    ? LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+    : []
+  // FA grid — only compute when active
+  const faFiltered = source === 'fa'
+    ? FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+    : []
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" onClick={handleOpen} title="Browse icons"
+        style={{ padding: '6px 8px', background: open ? 'var(--color-accent-bg-md)' : 'var(--color-overlay-md)', border: `1px solid ${open ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 7, color: 'var(--color-accent-light)', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}>
+        🔍
+      </button>
+
+      {open && (
+        <div style={popupStyle}>
+          {/* Source selection screen */}
+          {!source && (
+            <>
+              <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 2 }}>Choose icon source</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('selfhst'); setSearch('') }}>
+                  <span style={{ fontSize: 18 }}>🖼️</span>selfh.st
+                </button>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('lucide'); setSearch('') }}>
+                  <LucideIcons.Shapes size={18} />Lucide
+                </button>
+                <button type="button" style={btnStyle(false)} onClick={() => { setSource('fa'); setSearch('') }}>
+                  <FontAwesomeIcon icon={['fas', 'star']} style={{ fontSize: 18 }} />Font Awesome
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* selfh.st screen */}
+          {source === 'selfhst' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {selfhstFiltered.map(icon => (
+                  <button key={icon.slug} type="button" title={icon.name} onClick={() => handleSelect(icon.url)}
+                    style={{ padding: 6, background: value === icon.url ? 'var(--color-accent-bg-lg)' : 'none', border: `1px solid ${value === icon.url ? 'var(--color-accent)' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={icon.url} alt={icon.name} style={{ width: 24, height: 24, objectFit: 'contain' }} onError={e => { e.target.style.opacity = '0.2' }} />
+                  </button>
+                ))}
+                {selfhstFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
+
+          {/* Lucide screen */}
+          {source === 'lucide' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {lucideFiltered.map(name => {
+                  const LIcon = LucideIcons[name]
+                  if (!LIcon) return null
+                  const val = `lucide:${name}`
+                  const isSelected = value === val
+                  return (
+                    <button key={name} type="button" title={name} onClick={() => handleSelect(val)}
+                      style={{ padding: 7, borderRadius: 7, border: `1px solid ${isSelected ? 'var(--color-accent)' : 'transparent'}`, background: isSelected ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSelected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)' }}>
+                      <LIcon size={16} strokeWidth={1.75} />
+                    </button>
+                  )
+                })}
+                {lucideFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
+
+          {/* Font Awesome screen */}
+          {source === 'fa' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {backBtn}
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search icons…" style={searchStyle} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                {faFiltered.map(icon => {
+                  const val = `fa:${icon.prefix === 'fas' ? 'solid' : icon.prefix === 'far' ? 'regular' : 'brands'}/${icon.name}`
+                  const isSelected = value === val
+                  return (
+                    <button key={val} type="button" title={icon.label} onClick={() => handleSelect(val)}
+                      style={{ padding: 7, borderRadius: 7, border: `1px solid ${isSelected ? 'var(--color-accent)' : 'transparent'}`, background: isSelected ? 'var(--color-accent-bg-sm)' : 'var(--color-overlay-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSelected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)' }}>
+                      <FontAwesomeIcon icon={[icon.prefix, icon.name]} style={{ width: 16, height: 16 }} />
+                    </button>
+                  )
+                })}
+                {faFiltered.length === 0 && <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: 8 }}>No icons found</div>}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -887,7 +1189,7 @@ function ServiceModal({ service, onSave, onClose, token, adapterCatalog }) {
           <div style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 4 }}>Icon <span style={{ color: 'var(--color-text-ghost)' }}>— emoji or image URL</span></div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={form.icon || ''} onChange={e => set('icon', e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="🔗 or https://..." />
-            <IconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
+            <UnifiedIconPicker value={form.icon || ''} onChange={v => set('icon', v)} />
             <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--color-overlay-md3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {renderIcon(form.icon, '🔗', 22)}
             </div>
@@ -1443,6 +1745,10 @@ export default function App() {
     catch { return new Set() }
   })
   const [searchQuery, setSearchQuery] = useState('')
+  const [columns, setColumns] = useState(() => {
+    const v = parseInt(localStorage.getItem('hive_columns'), 10)
+    return (v >= 1 && v <= 3) ? v : 2
+  })
   const [theme, setTheme] = useState(() => localStorage.getItem('hive-theme') || 'dark')
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1512,14 +1818,31 @@ export default function App() {
   const authBackup = () => backup(token)
   const authImport = (file) => importConfig(file, token)
 
+  const handleColumnCycle = () => {
+    const next = (columns % 3) + 1  // cycles 1→2→3→1
+    setColumns(next)
+    localStorage.setItem('hive_columns', next)
+    if (isUnlocked) {
+      authSave({ ...config, settings: { ...config.settings, columns: next } }).catch(() => {})
+    }
+  }
+
   const isMobile = width < 768
   const getColumns = () => {
     if (width < 768) return 1
     if (width < 1100) return 2
-    return Math.min(config?.settings?.columns || 2, 4)
+    return Math.min(columns, 3)
   }
 
   useEffect(() => { if (!loading) setTimeout(() => setVisible(true), 50) }, [loading])
+
+  useEffect(() => {
+    if (!loading && config?.settings?.columns) {
+      const clamped = Math.min(Math.max(config.settings.columns, 1), 3)
+      setColumns(clamped)
+      localStorage.setItem('hive_columns', clamped)
+    }
+  }, [loading, config])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontFamily: 'system-ui' }}>
@@ -1775,10 +2098,20 @@ export default function App() {
         {isUnlocked && (
           <ConfigMenu onExport={authBackup} onImport={authImport} onWidgets={() => setWidgetsPanelOpen(true)} onSecrets={() => setSecretsPanelOpen(true)} />
         )}
+        <button
+          type="button"
+          onClick={handleColumnCycle}
+          title={`${columns} column${columns > 1 ? 's' : ''} (click to change)`}
+          style={{ padding: '6px 8px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 7, color: 'var(--color-text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+        >
+          {columns === 1 ? <LucideIcons.LayoutList size={16} /> :
+           columns === 3 ? <LucideIcons.Grid3x3 size={16} /> :
+           <LucideIcons.LayoutGrid size={16} />}
+        </button>
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: isMobile ? '32px 16px 48px' : '48px 24px 64px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: getColumns() >= 3 ? 1600 : getColumns() >= 2 ? 1300 : 900, margin: '0 auto', padding: isMobile ? '32px 16px 48px' : '48px 24px 64px' }}>
 
         {/* Header */}
         <div className={`fade ${visible ? 'show' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, marginBottom: 24 }}>
