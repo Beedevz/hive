@@ -6,14 +6,42 @@ import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSe
 import { SortableContext, useSortable, rectSortingStrategy, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import * as LucideIcons from 'lucide-react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 // ─── Icon helper ──────────────────────────────────────────────────
 // Renders a URL as <img> or falls back to emoji/text.
 function renderIcon(icon, fallback, size = 24) {
-  const val = icon || fallback || ''
+  const val = icon || ''
+
+  if (val.startsWith('lucide:')) {
+    const name = val.slice(7)
+    const LIcon = LucideIcons[name]
+    if (LIcon) return <LIcon size={size} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+    return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+  }
+
+  if (val.startsWith('fa:')) {
+    // format: fa:solid/server or fa:regular/bookmark or fa:brands/github
+    const parts = val.slice(3).split('/')
+    if (parts.length === 2) {
+      const prefixMap = { solid: 'fas', regular: 'far', brands: 'fab' }
+      const prefix = prefixMap[parts[0]]
+      const iconName = parts[1]
+      if (prefix) {
+        try {
+          return <FontAwesomeIcon icon={[prefix, iconName]} style={{ width: size, height: size, flexShrink: 0 }} />
+        } catch {
+          return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+        }
+      }
+    }
+    return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{fallback}</span>
+  }
+
   if (val.startsWith('http') || val.startsWith('/')) {
     return <img src={val} alt="" style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
   }
+
   return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>{val || fallback}</span>
 }
 
