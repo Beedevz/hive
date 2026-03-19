@@ -1,3 +1,19 @@
+// @title           Hive API
+// @version         1.0
+// @description     Config-driven homelab start page backend API.
+// @contact.name    Beedevz
+// @contact.url     https://github.com/beedevz/hive
+// @license.name    MIT
+// @license.url     https://opensource.org/licenses/MIT
+// @host            localhost:3001
+// @BasePath        /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by your Hive token.
+// @securityDefinitions.apikey HiveToken
+// @in header
+// @name X-Hive-Token
 package main
 
 import (
@@ -21,6 +37,8 @@ import (
 	"time"
 
 	"github.com/beedevz/hive-api/adapters"
+	_ "github.com/beedevz/hive-api/docs"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -550,6 +568,30 @@ func bootstrapConfig() {
 	log.Printf("bootstrap: created config.yaml from config.example.yaml")
 }
 
+// healthHandler godoc
+// @Summary     Health check
+// @Description Returns ok when the API is running
+// @Tags        system
+// @Produce     json
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Router      /health [get]
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// versionHandler godoc
+// @Summary     API version
+// @Description Returns the running API version
+// @Tags        system
+// @Produce     json
+// @Success     200 {object} map[string]string "{"version":"v1.0.0"}"
+// @Router      /version [get]
+func versionHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"version":%q}`, version)
+}
+
 func main() {
 	bootstrapConfig()
 	startCPUPoller()
@@ -558,14 +600,8 @@ func main() {
 		port = "3001"
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
-	mux.HandleFunc("/version", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"version":%q}`, version)
-	}))
+	mux.HandleFunc("/health", corsMiddleware(healthHandler))
+	mux.HandleFunc("/version", corsMiddleware(versionHandler))
 	mux.HandleFunc("/auth/verify", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", 405)
@@ -855,6 +891,8 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))
+	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+
 	log.Printf("config-api listening on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }

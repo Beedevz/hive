@@ -12,7 +12,9 @@ ARG VERSION=dev
 WORKDIR /app
 COPY config-api/go.mod config-api/go.sum ./
 RUN go mod download
+RUN go install github.com/swaggo/swag/cmd/swag@latest
 COPY config-api/ .
+RUN swag init --generalInfo main.go --output docs
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${VERSION}" -o config-api .
 
 # ── Stage 3: Final image (nginx + supervisord) ────────────────────

@@ -1,0 +1,54 @@
+basePath: /api
+host: localhost:3001
+info:
+  contact:
+    name: Beedevz
+    url: https://github.com/beedevz/hive
+  description: Config-driven homelab start page backend API.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Hive API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Returns ok when the API is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"status":"ok"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - system
+  /version:
+    get:
+      description: Returns the running API version
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"version":"v1.0.0"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: API version
+      tags:
+      - system
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by your Hive token.
+    in: header
+    name: Authorization
+    type: apiKey
+  HiveToken:
+    in: header
+    name: X-Hive-Token
+    type: apiKey
+swagger: "2.0"

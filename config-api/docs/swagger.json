@@ -1,0 +1,79 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Config-driven homelab start page backend API.",
+        "title": "Hive API",
+        "contact": {
+            "name": "Beedevz",
+            "url": "https://github.com/beedevz/hive"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:3001",
+    "basePath": "/api",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Returns ok when the API is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/version": {
+            "get": {
+                "description": "Returns the running API version",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "API version",
+                "responses": {
+                    "200": {
+                        "description": "{\"version\":\"v1.0.0\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by your Hive token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "HiveToken": {
+            "type": "apiKey",
+            "name": "X-Hive-Token",
+            "in": "header"
+        }
+    }
+}
