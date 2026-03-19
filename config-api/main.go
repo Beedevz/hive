@@ -608,6 +608,15 @@ func main() {
 				http.ServeFile(w, r, customLogo)
 				return
 			}
+			theme := r.URL.Query().Get("theme")
+			if theme != "light" {
+				theme = "dark"
+			}
+			themedLogo := "/usr/share/nginx/html/logo-" + theme + ".png"
+			if _, err := os.Stat(themedLogo); err == nil {
+				http.ServeFile(w, r, themedLogo)
+				return
+			}
 			http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
 		case http.MethodPost:
 			if !requireAuth(w, r) {
