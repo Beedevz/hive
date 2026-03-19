@@ -1272,6 +1272,7 @@ function WidgetsPanel({ config, onSave, onClose }) {
   const [draft, setDraft] = useState(() =>
     WIDGET_DEFS.map(def => getWidget(def.type))
   )
+  const [title, setTitle] = useState(config?.settings?.title || '')
 
   const toggle = (i) => {
     setDraft(d => d.map((w, idx) => idx === i ? { ...w, enabled: !w.enabled } : w))
@@ -1284,7 +1285,11 @@ function WidgetsPanel({ config, onSave, onClose }) {
   }
 
   const save = () => {
-    const newConfig = { ...config, widgets: draft }
+    const newConfig = {
+      ...config,
+      settings: { ...(config.settings || {}), title },
+      widgets: draft,
+    }
     onSave(newConfig)
     onClose()
   }
@@ -1321,6 +1326,23 @@ function WidgetsPanel({ config, onSave, onClose }) {
 
         {/* Widget list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* General */}
+          <div style={{
+            background: 'var(--color-overlay-xs)', border: '1px solid var(--color-overlay-md3)',
+            borderRadius: 10, padding: '12px 14px',
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>
+              General
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>Site Title</div>
+            <input
+              type="text"
+              value={title}
+              placeholder="Hive Dashboard"
+              onChange={e => setTitle(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
           {WIDGET_DEFS.map((def, i) => {
             const w = draft[i]
             return (
@@ -1749,6 +1771,17 @@ export default function App() {
     const v = parseInt(localStorage.getItem('hive_columns'), 10)
     return (v >= 1 && v <= 3) ? v : 2
   })
+  const [offline, setOffline] = useState(!navigator.onLine)
+  useEffect(() => {
+    const goOffline = () => setOffline(true)
+    const goOnline  = () => setOffline(false)
+    window.addEventListener('offline', goOffline)
+    window.addEventListener('online',  goOnline)
+    return () => {
+      window.removeEventListener('offline', goOffline)
+      window.removeEventListener('online',  goOnline)
+    }
+  }, [])
   const [theme, setTheme] = useState(() => localStorage.getItem('hive-theme') || 'dark')
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -2110,6 +2143,16 @@ export default function App() {
         </button>
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
+
+      {offline && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          background: 'var(--color-yellow)', color: '#000',
+          textAlign: 'center', padding: '6px 16px', fontSize: 13, fontWeight: 500,
+        }}>
+          ⚠️ İnternet bağlantısı yok
+        </div>
+      )}
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: getColumns() >= 3 ? 1600 : getColumns() >= 2 ? 1300 : 900, margin: '0 auto', padding: isMobile ? '32px 16px 48px' : '48px 24px 64px' }}>
 

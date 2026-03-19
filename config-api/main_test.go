@@ -330,3 +330,83 @@ func TestCORSMiddleware_Options(t *testing.T) {
 		t.Errorf("expected 204 for OPTIONS, got %d", rr.Code)
 	}
 }
+
+// ─── handleManifest tests ──────────────────────────────────────────────────────
+
+func TestHandleManifest_DefaultTitle(t *testing.T) {
+	req := httptest.NewRequest("GET", "/manifest.json", nil)
+	rr := httptest.NewRecorder()
+	handleManifest(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+
+	ct := rr.Header().Get("Content-Type")
+	if ct != "application/manifest+json" {
+		t.Errorf("expected application/manifest+json, got %s", ct)
+	}
+
+	var m map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	// When no config file exists in the test working directory, the handler
+	// falls back to "Hive Dashboard". If a real config.yaml/config.json
+	// exists in config-api/, this assertion may fail — run from a clean env.
+	name, _ := m["name"].(string)
+	if name != "Hive Dashboard" {
+		t.Errorf("expected default title 'Hive Dashboard', got %q", name)
+	}
+
+	for _, field := range []string{"short_name", "start_url", "display", "theme_color", "background_color", "icons"} {
+		if _, ok := m[field]; !ok {
+			t.Errorf("manifest missing field: %s", field)
+		}
+	}
+
+	if m["start_url"] != "/" {
+		t.Errorf("start_url must be /, got %v", m["start_url"])
+	}
+	if m["display"] != "standalone" {
+		t.Errorf("display must be standalone, got %v", m["display"])
+	}
+}
+
+func TestHandleManifest_ShortNameCapped(t *testing.T) {
+	req := httptest.NewRequest("GET", "/manifest.json", nil)
+	rr := httptest.NewRecorder()
+	handleManifest(rr, req)
+
+	var m map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	short, _ := m["short_name"].(string)
+	if len([]rune(short)) > 12 {
+		t.Errorf("short_name must be ≤ 12 runes, got %d: %q", len([]rune(short)), short)
+	}
+}
+
+func TestHandleManifest_IconsPresent(t *testing.T) {
+	req := httptest.NewRequest("GET", "/manifest.json", nil)
+	rr := httptest.NewRecorder()
+	handleManifest(rr, req)
+
+	var m map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	icons, ok := m["icons"].([]interface{})
+	if !ok || len(icons) == 0 {
+		t.Fatal("manifest must contain at least one icon")
+	}
+	for i, ic := range icons {
+		icon, _ := ic.(map[string]interface{})
+		if icon["src"] == nil || icon["sizes"] == nil {
+			t.Errorf("icon %d missing src or sizes", i)
+		}
+	}
+}
