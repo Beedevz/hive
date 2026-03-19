@@ -613,6 +613,50 @@ func versionHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"version":%q}`, version)
 }
 
+func handleManifest(w http.ResponseWriter, r *http.Request) {
+	title := "Hive Dashboard"
+
+	format := detectFormat()
+	if data, err := os.ReadFile(configPath(format)); err == nil {
+		var raw interface{}
+		if format == "yaml" {
+			if yaml.Unmarshal(data, &raw) == nil {
+				raw = convertMap(raw)
+			}
+		} else {
+			json.Unmarshal(data, &raw) //nolint:errcheck
+		}
+		if cfg, ok := raw.(map[string]interface{}); ok {
+			if s, ok := cfg["settings"].(map[string]interface{}); ok {
+				if t, ok := s["title"].(string); ok && t != "" {
+					title = t
+				}
+			}
+		}
+	}
+
+	short := title
+	if len([]rune(short)) > 12 {
+		short = string([]rune(short)[:12])
+	}
+
+	manifest := map[string]interface{}{
+		"name":             title,
+		"short_name":       short,
+		"start_url":        "/",
+		"display":          "standalone",
+		"theme_color":      "#0f1117",
+		"background_color": "#0f1117",
+		"icons": []map[string]string{
+			{"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+		},
+	}
+	out, _ := json.Marshal(manifest)
+	w.Header().Set("Content-Type", "application/manifest+json")
+	w.Write(out) //nolint:errcheck
+}
+
 // authVerifyHandler godoc
 // @Summary     Verify auth token
 // @Description Validates the X-Hive-Token or Bearer token in the request header
@@ -1123,6 +1167,7 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", corsMiddleware(healthHandler))
+	mux.HandleFunc("/manifest.json", corsMiddleware(handleManifest))
 	mux.HandleFunc("/version", corsMiddleware(versionHandler))
 	mux.HandleFunc("/auth/verify", corsMiddleware(authVerifyHandler))
 	mux.HandleFunc("/config", corsMiddleware(configHandler))
