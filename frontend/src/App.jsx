@@ -1745,6 +1745,10 @@ export default function App() {
     catch { return new Set() }
   })
   const [searchQuery, setSearchQuery] = useState('')
+  const [columns, setColumns] = useState(() => {
+    const v = parseInt(localStorage.getItem('hive_columns'))
+    return (v >= 1 && v <= 3) ? v : 2
+  })
   const [theme, setTheme] = useState(() => localStorage.getItem('hive-theme') || 'dark')
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1814,14 +1818,31 @@ export default function App() {
   const authBackup = () => backup(token)
   const authImport = (file) => importConfig(file, token)
 
+  const handleColumnCycle = () => {
+    const next = (columns % 3) + 1  // cycles 1→2→3→1
+    setColumns(next)
+    localStorage.setItem('hive_columns', next)
+    if (isUnlocked) {
+      authSave({ ...config, settings: { ...config.settings, columns: next } })
+    }
+  }
+
   const isMobile = width < 768
   const getColumns = () => {
     if (width < 768) return 1
     if (width < 1100) return 2
-    return Math.min(config?.settings?.columns || 2, 4)
+    return Math.min(columns, 3)
   }
 
   useEffect(() => { if (!loading) setTimeout(() => setVisible(true), 50) }, [loading])
+
+  useEffect(() => {
+    if (!loading && config?.settings?.columns) {
+      const clamped = Math.min(Math.max(config.settings.columns, 1), 3)
+      setColumns(clamped)
+      localStorage.setItem('hive_columns', clamped)
+    }
+  }, [loading])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontFamily: 'system-ui' }}>
@@ -2077,6 +2098,16 @@ export default function App() {
         {isUnlocked && (
           <ConfigMenu onExport={authBackup} onImport={authImport} onWidgets={() => setWidgetsPanelOpen(true)} onSecrets={() => setSecretsPanelOpen(true)} />
         )}
+        <button
+          type="button"
+          onClick={handleColumnCycle}
+          title={`${columns} column${columns > 1 ? 's' : ''} (click to change)`}
+          style={{ padding: '6px 8px', background: 'var(--color-overlay-md)', border: '1px solid var(--color-border)', borderRadius: 7, color: 'var(--color-text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+        >
+          {columns === 1 && <LucideIcons.LayoutList size={16} />}
+          {columns === 2 && <LucideIcons.LayoutGrid size={16} />}
+          {columns === 3 && <LucideIcons.Grid3x3 size={16} />}
+        </button>
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
 
