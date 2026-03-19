@@ -380,7 +380,9 @@ func TestHandleManifest_ShortNameCapped(t *testing.T) {
 	handleManifest(rr, req)
 
 	var m map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&m)
+	if err := json.NewDecoder(rr.Body).Decode(&m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
 	short, _ := m["short_name"].(string)
 	if len([]rune(short)) > 12 {
 		t.Errorf("short_name must be ≤ 12 runes, got %d: %q", len([]rune(short)), short)
@@ -393,7 +395,9 @@ func TestHandleManifest_IconsPresent(t *testing.T) {
 	handleManifest(rr, req)
 
 	var m map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&m)
+	if err := json.NewDecoder(rr.Body).Decode(&m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
 
 	icons, ok := m["icons"].([]interface{})
 	if !ok || len(icons) == 0 {

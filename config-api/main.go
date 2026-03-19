@@ -614,6 +614,11 @@ func versionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleManifest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	title := "Hive Dashboard"
 
 	format := detectFormat()
@@ -624,7 +629,9 @@ func handleManifest(w http.ResponseWriter, r *http.Request) {
 				raw = convertMap(raw)
 			}
 		} else {
-			json.Unmarshal(data, &raw) //nolint:errcheck
+			if json.Unmarshal(data, &raw) != nil {
+				raw = nil
+			}
 		}
 		if cfg, ok := raw.(map[string]interface{}); ok {
 			if s, ok := cfg["settings"].(map[string]interface{}); ok {
