@@ -288,8 +288,18 @@ func probeClient() *http.Client {
 	}
 }
 
-// handleProbe routes /probe/{name}/status and /probe/{name}/details.
-// The service URL is always read from config — it never comes from the caller.
+// handleProbe godoc
+// @Summary     Service probe status / details
+// @Description Checks if a service is online (status) or returns adapter stats (details)
+// @Tags        probe
+// @Param       name path string true "Service name as defined in config"
+// @Produce     json
+// @Success     200 {object} probeResult
+// @Failure     400 {string} string "Invalid path or service name"
+// @Failure     404 {string} string "Service not found"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /probe/{name}/status  [get]
+// @Router      /probe/{name}/details [get]
 func handleProbe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", 405)
@@ -500,6 +510,14 @@ func readMemInfo() (ramInfo, error) {
 	return ramInfo{TotalMB: total, UsedMB: used, Percent: pct}, nil
 }
 
+// systemStats godoc
+// @Summary     Host system stats
+// @Description Returns real-time CPU, RAM and disk usage of the host
+// @Tags        system
+// @Produce     json
+// @Success     200 {object} systemInfo
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /system [get]
 func systemStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", 405)
@@ -592,6 +610,416 @@ func versionHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"version":%q}`, version)
 }
 
+// authVerifyHandler godoc
+// @Summary     Verify auth token
+// @Description Validates the X-Hive-Token or Bearer token in the request header
+// @Tags        auth
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     json
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /auth/verify [get]
+func authVerifyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	if !requireAuth(w, r) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// configHandler godoc
+// @Summary     Get or save config
+// @Description GET returns the full configuration as JSON. PUT replaces it (creates a backup first).
+// @Tags        config
+// @Produce     json
+// @Accept      json
+// @Param       body body object false "Config object (PUT only)"
+// @Success     200 {object} object "Config object or {"status":"ok"}"
+// @Failure     400 {string} string "Invalid JSON"
+// @Failure     401 {string} string "Unauthorized (PUT)"
+// @Failure     404 {string} string "Config not found (GET)"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /config [get]
+// @Router      /config [put]
+func configHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		readConfig(w, r)
+	case "PUT":
+		if !requireAuth(w, r) {
+			return
+		}
+		writeConfig(w, r)
+	default:
+		http.Error(w, "Method not allowed", 405)
+	}
+}
+
+// configBackupHandler godoc
+// @Summary     Download config backup
+// @Description Downloads the current config file as a timestamped attachment
+// @Tags        config
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     application/octet-stream
+// @Success     200 {file} binary "Config backup file"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     404 {string} string "Config not found"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /config/backup [get]
+func configBackupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	if !requireAuth(w, r) {
+		return
+	}
+	backupConfig(w, r)
+}
+
+// configRawHandler godoc
+// @Summary     Get or replace raw config text
+// @Description GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.
+// @Tags        config
+// @Produce     text/plain
+// @Accept      text/plain
+// @Param       format query string false "Format override" Enums(yaml,json)
+// @Success     200 {string} string "Raw config text"
+// @Failure     400 {string} string "Invalid format or parse error"
+// @Failure     401 {string} string "Unauthorized (PUT)"
+// @Failure     404 {string} string "Not found"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /config/raw [get]
+// @Router      /config/raw [put]
+func configRawHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		format := r.URL.Query().Get("format")
+		if format == "" {
+			format = detectFormat()
+		}
+		if !strings.Contains(format, "yaml") && !strings.Contains(format, "json") {
+			http.Error(w, "Invalid format", 400)
+			return
+		}
+		data, err := os.ReadFile(configPath(format))
+		if err != nil {
+			http.Error(w, "Not found", 404)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(data)
+
+	case http.MethodPut:
+		if !requireAuth(w, r) {
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Read error", 400)
+			return
+		}
+		// Parse raw YAML or JSON into a generic value to validate it
+		var parsed interface{}
+		ct := r.Header.Get("Content-Type")
+		if strings.Contains(ct, "json") {
+			err = json.Unmarshal(body, &parsed)
+		} else {
+			err = yaml.Unmarshal(body, &parsed)
+		}
+		if err != nil {
+			http.Error(w, "Parse error: "+err.Error(), 400)
+			return
+		}
+		format := detectFormat()
+		existing, _ := os.ReadFile(configPath(format))
+		if existing != nil {
+			backupPath := fmt.Sprintf("%s/config.backup.%d.%s", configDir, time.Now().Unix(), format)
+			os.WriteFile(backupPath, existing, 0644)
+		}
+		var out []byte
+		if format == "yaml" {
+			out, err = yaml.Marshal(parsed)
+		} else {
+			out, err = json.MarshalIndent(parsed, "", "  ")
+		}
+		if err != nil {
+			http.Error(w, "Marshal error: "+err.Error(), 500)
+			return
+		}
+		if err := os.WriteFile(configPath(format), out, 0644); err != nil {
+			http.Error(w, "Write error: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// logoHandler godoc
+// @Summary     Get, upload or delete logo
+// @Description GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.
+// @Tags        config
+// @Param       theme query string false "Theme variant (GET only)" Enums(dark,light)
+// @Produce     image/png
+// @Success     200 {file} binary "Logo image or {"status":"ok"}"
+// @Failure     400 {string} string "Missing or invalid file"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     405 {string} string "Method not allowed"
+// @Failure     415 {string} string "Unsupported image type"
+// @Router      /logo [get]
+// @Router      /logo [post]
+// @Router      /logo [delete]
+func logoHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		customLogo := filepath.Join(configDir, "logo.png")
+		if _, err := os.Stat(customLogo); err == nil {
+			http.ServeFile(w, r, customLogo)
+			return
+		}
+		// Use a fixed map so user input never touches the path directly.
+		themedLogos := map[string]string{
+			"dark":  "/usr/share/nginx/html/logo-dark.png",
+			"light": "/usr/share/nginx/html/logo-light.png",
+		}
+		themedLogo, ok := themedLogos[r.URL.Query().Get("theme")]
+		if !ok {
+			themedLogo = themedLogos["dark"]
+		}
+		if _, err := os.Stat(themedLogo); err == nil {
+			http.ServeFile(w, r, themedLogo)
+			return
+		}
+		http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
+	case http.MethodPost:
+		if !requireAuth(w, r) {
+			return
+		}
+		if err := r.ParseMultipartForm(5 << 20); err != nil {
+			http.Error(w, "File too large (max 5MB)", 400)
+			return
+		}
+		file, header, err := r.FormFile("logo")
+		if err != nil {
+			http.Error(w, "Missing file field 'logo'", 400)
+			return
+		}
+		defer file.Close()
+		ct := header.Header.Get("Content-Type")
+		allowed := map[string]bool{"image/png": true, "image/jpeg": true, "image/svg+xml": true, "image/webp": true, "image/gif": true}
+		if !allowed[ct] {
+			// Fallback: check first 512 bytes
+			buf := make([]byte, 512)
+			n, _ := file.Read(buf)
+			detected := http.DetectContentType(buf[:n])
+			if !allowed[detected] {
+				http.Error(w, "Unsupported image type", 415)
+				return
+			}
+			// Seek back to start
+			if seeker, ok := file.(io.Seeker); ok {
+				seeker.Seek(0, io.SeekStart)
+			}
+		}
+		dst, err := os.OpenFile(filepath.Join(configDir, "logo.png"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			http.Error(w, "Write error: "+err.Error(), 500)
+			return
+		}
+		_, copyErr := io.Copy(dst, file)
+		closeErr := dst.Close()
+		if copyErr != nil {
+			http.Error(w, "Write error: "+copyErr.Error(), 500)
+			return
+		}
+		if closeErr != nil {
+			http.Error(w, "Write error: "+closeErr.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	case http.MethodDelete:
+		if !requireAuth(w, r) {
+			return
+		}
+		customLogo := filepath.Join(configDir, "logo.png")
+		if err := os.Remove(customLogo); err != nil && !os.IsNotExist(err) {
+			http.Error(w, "Delete error: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	default:
+		http.Error(w, "Method not allowed", 405)
+	}
+}
+
+// secretsHandler godoc
+// @Summary     Manage secrets
+// @Description GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.
+// @Tags        secrets
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     json
+// @Accept      json
+// @Param       key  query  string false "Secret key to delete (DELETE only)"
+// @Param       body body   object false "{"key":"...", "value":"..."} (PUT only)"
+// @Success     200 {object} object "Key list or {"status":"ok"}"
+// @Failure     400 {string} string "Invalid body or missing key"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /secrets [get]
+// @Router      /secrets [put]
+// @Router      /secrets [delete]
+func secretsHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		s := loadSecrets()
+		keys := make([]string, 0, len(s))
+		for k := range s {
+			keys = append(keys, k)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"keys": keys})
+
+	case http.MethodPut:
+		var body struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Key == "" {
+			http.Error(w, "Invalid body: key and value required", 400)
+			return
+		}
+		s := loadSecrets()
+		s[body.Key] = body.Value
+		if err := saveSecrets(s); err != nil {
+			http.Error(w, "Write error: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+
+	case http.MethodDelete:
+		key := r.URL.Query().Get("key")
+		if key == "" {
+			http.Error(w, "Missing ?key=", 400)
+			return
+		}
+		s := loadSecrets()
+		delete(s, key)
+		if err := saveSecrets(s); err != nil {
+			http.Error(w, "Write error: "+err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+
+	default:
+		http.Error(w, "Method not allowed", 405)
+	}
+}
+
+// secretsBackupHandler godoc
+// @Summary     Download secrets backup
+// @Description Downloads the raw secrets.yaml file as an attachment
+// @Tags        secrets
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Produce     application/x-yaml
+// @Success     200 {file} binary "secrets.yaml"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     404 {string} string "No secrets file found"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /secrets/backup [get]
+func secretsBackupHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	data, err := os.ReadFile(secretsFile)
+	if err != nil {
+		http.Error(w, "No secrets file found", 404)
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Disposition", "attachment; filename=secrets.yaml")
+	w.Write(data)
+}
+
+// secretsImportHandler godoc
+// @Summary     Import secrets from YAML
+// @Description Merges a YAML key-value map into the existing secrets store
+// @Tags        secrets
+// @Security    HiveToken
+// @Security    BearerAuth
+// @Accept      application/x-yaml
+// @Produce     json
+// @Param       body body string true "YAML key-value map"
+// @Success     200 {object} map[string]string "{"status":"ok"}"
+// @Failure     400 {string} string "Read error or Invalid YAML"
+// @Failure     401 {string} string "Unauthorized"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /secrets/import [post]
+func secretsImportHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireAuth(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Read error", 400)
+		return
+	}
+	var incoming map[string]string
+	if err := yaml.Unmarshal(body, &incoming); err != nil || incoming == nil {
+		http.Error(w, "Invalid YAML", 400)
+		return
+	}
+	existing := loadSecrets()
+	for k, v := range incoming {
+		existing[k] = v
+	}
+	if err := saveSecrets(existing); err != nil {
+		http.Error(w, "Write error: "+err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// adaptersCatalogHandler godoc
+// @Summary     List adapter catalog
+// @Description Returns all available adapter types with their metadata
+// @Tags        adapters
+// @Produce     json
+// @Success     200 {object} object "Adapter catalog"
+// @Router      /adapters-catalog [get]
+func adaptersCatalogHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(adapters.Catalog)
+}
+
 func main() {
 	bootstrapConfig()
 	startCPUPoller()
@@ -602,295 +1030,18 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", corsMiddleware(healthHandler))
 	mux.HandleFunc("/version", corsMiddleware(versionHandler))
-	mux.HandleFunc("/auth/verify", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			http.Error(w, "Method not allowed", 405)
-			return
-		}
-		if !requireAuth(w, r) {
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
-	mux.HandleFunc("/config", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			readConfig(w, r)
-		case "PUT":
-			if !requireAuth(w, r) {
-				return
-			}
-			writeConfig(w, r)
-		default:
-			http.Error(w, "Method not allowed", 405)
-		}
-	}))
-	mux.HandleFunc("/config/backup", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			http.Error(w, "Method not allowed", 405)
-			return
-		}
-		if !requireAuth(w, r) {
-			return
-		}
-		backupConfig(w, r)
-	}))
-	mux.HandleFunc("/logo", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			customLogo := filepath.Join(configDir, "logo.png")
-			if _, err := os.Stat(customLogo); err == nil {
-				http.ServeFile(w, r, customLogo)
-				return
-			}
-			// Use a fixed map so user input never touches the path directly.
-			themedLogos := map[string]string{
-				"dark":  "/usr/share/nginx/html/logo-dark.png",
-				"light": "/usr/share/nginx/html/logo-light.png",
-			}
-			themedLogo, ok := themedLogos[r.URL.Query().Get("theme")]
-			if !ok {
-				themedLogo = themedLogos["dark"]
-			}
-			if _, err := os.Stat(themedLogo); err == nil {
-				http.ServeFile(w, r, themedLogo)
-				return
-			}
-			http.ServeFile(w, r, "/usr/share/nginx/html/logo.png")
-		case http.MethodPost:
-			if !requireAuth(w, r) {
-				return
-			}
-			if err := r.ParseMultipartForm(5 << 20); err != nil {
-				http.Error(w, "File too large (max 5MB)", 400)
-				return
-			}
-			file, header, err := r.FormFile("logo")
-			if err != nil {
-				http.Error(w, "Missing file field 'logo'", 400)
-				return
-			}
-			defer file.Close()
-			ct := header.Header.Get("Content-Type")
-			allowed := map[string]bool{"image/png": true, "image/jpeg": true, "image/svg+xml": true, "image/webp": true, "image/gif": true}
-			if !allowed[ct] {
-				// Fallback: check first 512 bytes
-				buf := make([]byte, 512)
-				n, _ := file.Read(buf)
-				detected := http.DetectContentType(buf[:n])
-				if !allowed[detected] {
-					http.Error(w, "Unsupported image type", 415)
-					return
-				}
-				// Seek back to start
-				if seeker, ok := file.(io.Seeker); ok {
-					seeker.Seek(0, io.SeekStart)
-				}
-			}
-			dst, err := os.OpenFile(filepath.Join(configDir, "logo.png"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-			if err != nil {
-				http.Error(w, "Write error: "+err.Error(), 500)
-				return
-			}
-			_, copyErr := io.Copy(dst, file)
-			closeErr := dst.Close()
-			if copyErr != nil {
-				http.Error(w, "Write error: "+copyErr.Error(), 500)
-				return
-			}
-			if closeErr != nil {
-				http.Error(w, "Write error: "+closeErr.Error(), 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"status":"ok"}`))
-		case http.MethodDelete:
-			if !requireAuth(w, r) {
-				return
-			}
-			customLogo := filepath.Join(configDir, "logo.png")
-			if err := os.Remove(customLogo); err != nil && !os.IsNotExist(err) {
-				http.Error(w, "Delete error: "+err.Error(), 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"status":"ok"}`))
-		default:
-			http.Error(w, "Method not allowed", 405)
-		}
-	}))
-	mux.HandleFunc("/secrets", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if !requireAuth(w, r) {
-			return
-		}
-		switch r.Method {
-		case http.MethodGet:
-			s := loadSecrets()
-			keys := make([]string, 0, len(s))
-			for k := range s {
-				keys = append(keys, k)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{"keys": keys})
-
-		case http.MethodPut:
-			var body struct {
-				Key   string `json:"key"`
-				Value string `json:"value"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Key == "" {
-				http.Error(w, "Invalid body: key and value required", 400)
-				return
-			}
-			s := loadSecrets()
-			s[body.Key] = body.Value
-			if err := saveSecrets(s); err != nil {
-				http.Error(w, "Write error: "+err.Error(), 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"status":"ok"}`))
-
-		case http.MethodDelete:
-			key := r.URL.Query().Get("key")
-			if key == "" {
-				http.Error(w, "Missing ?key=", 400)
-				return
-			}
-			s := loadSecrets()
-			delete(s, key)
-			if err := saveSecrets(s); err != nil {
-				http.Error(w, "Write error: "+err.Error(), 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"status":"ok"}`))
-
-		default:
-			http.Error(w, "Method not allowed", 405)
-		}
-	}))
-	mux.HandleFunc("/secrets/backup", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if !requireAuth(w, r) {
-			return
-		}
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", 405)
-			return
-		}
-		data, err := os.ReadFile(secretsFile)
-		if err != nil {
-			http.Error(w, "No secrets file found", 404)
-			return
-		}
-		w.Header().Set("Content-Type", "application/x-yaml")
-		w.Header().Set("Content-Disposition", "attachment; filename=secrets.yaml")
-		w.Write(data)
-	}))
-	mux.HandleFunc("/secrets/import", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if !requireAuth(w, r) {
-			return
-		}
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", 405)
-			return
-		}
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Read error", 400)
-			return
-		}
-		var incoming map[string]string
-		if err := yaml.Unmarshal(body, &incoming); err != nil || incoming == nil {
-			http.Error(w, "Invalid YAML", 400)
-			return
-		}
-		existing := loadSecrets()
-		for k, v := range incoming {
-			existing[k] = v
-		}
-		if err := saveSecrets(existing); err != nil {
-			http.Error(w, "Write error: "+err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
+	mux.HandleFunc("/auth/verify", corsMiddleware(authVerifyHandler))
+	mux.HandleFunc("/config", corsMiddleware(configHandler))
+	mux.HandleFunc("/config/backup", corsMiddleware(configBackupHandler))
+	mux.HandleFunc("/config/raw", corsMiddleware(configRawHandler))
+	mux.HandleFunc("/logo", corsMiddleware(logoHandler))
+	mux.HandleFunc("/secrets", corsMiddleware(secretsHandler))
+	mux.HandleFunc("/secrets/backup", corsMiddleware(secretsBackupHandler))
+	mux.HandleFunc("/secrets/import", corsMiddleware(secretsImportHandler))
 	mux.HandleFunc("/probe/", corsMiddleware(handleProbe))
 	mux.HandleFunc("/system", corsMiddleware(systemStats))
 	mux.HandleFunc("/adapters/", corsMiddleware(handleAdapter))
-	mux.HandleFunc("/adapters-catalog", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(adapters.Catalog)
-	}))
-	mux.HandleFunc("/config/raw", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			format := r.URL.Query().Get("format")
-			if format == "" {
-				format = detectFormat()
-			}
-			if !strings.Contains(format, "yaml") && !strings.Contains(format, "json") {
-				http.Error(w, "Invalid format", 400)
-				return
-			}
-			data, err := os.ReadFile(configPath(format))
-			if err != nil {
-				http.Error(w, "Not found", 404)
-				return
-			}
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write(data)
-
-		case http.MethodPut:
-			if !requireAuth(w, r) {
-				return
-			}
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "Read error", 400)
-				return
-			}
-			// Parse raw YAML or JSON into a generic value to validate it
-			var parsed interface{}
-			ct := r.Header.Get("Content-Type")
-			if strings.Contains(ct, "json") {
-				err = json.Unmarshal(body, &parsed)
-			} else {
-				err = yaml.Unmarshal(body, &parsed)
-			}
-			if err != nil {
-				http.Error(w, "Parse error: "+err.Error(), 400)
-				return
-			}
-			format := detectFormat()
-			existing, _ := os.ReadFile(configPath(format))
-			if existing != nil {
-				backupPath := fmt.Sprintf("%s/config.backup.%d.%s", configDir, time.Now().Unix(), format)
-				os.WriteFile(backupPath, existing, 0644)
-			}
-			var out []byte
-			if format == "yaml" {
-				out, err = yaml.Marshal(parsed)
-			} else {
-				out, err = json.MarshalIndent(parsed, "", "  ")
-			}
-			if err != nil {
-				http.Error(w, "Marshal error: "+err.Error(), 500)
-				return
-			}
-			if err := os.WriteFile(configPath(format), out, 0644); err != nil {
-				http.Error(w, "Write error: "+err.Error(), 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"status":"ok"}`))
-
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
+	mux.HandleFunc("/adapters-catalog", corsMiddleware(adaptersCatalogHandler))
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
 	log.Printf("config-api listening on :%s", port)

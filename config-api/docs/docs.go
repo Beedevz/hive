@@ -22,6 +22,391 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/adapters-catalog": {
+            "get": {
+                "description": "Returns all available adapter types with their metadata",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "adapters"
+                ],
+                "summary": "List adapter catalog",
+                "responses": {
+                    "200": {
+                        "description": "Adapter catalog",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/adapters/{type}": {
+            "get": {
+                "description": "Fetches live stats from the named adapter for the given service. Results are cached for 60 s.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "adapters"
+                ],
+                "summary": "Run adapter for a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Adapter type (e.g. pihole, proxmox, sonarr)",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "service",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AdapterResult with stats array",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing adapter type or service parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validates the X-Hive-Token or Bearer token in the request header",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify auth token",
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config": {
+            "get": {
+                "description": "GET returns the full configuration as JSON. PUT replaces it (creates a backup first).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get or save config",
+                "parameters": [
+                    {
+                        "description": "Config object (PUT only)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Config object or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid JSON",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (PUT)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Config not found (GET)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "GET returns the full configuration as JSON. PUT replaces it (creates a backup first).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get or save config",
+                "parameters": [
+                    {
+                        "description": "Config object (PUT only)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Config object or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid JSON",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (PUT)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Config not found (GET)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/backup": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Downloads the current config file as a timestamped attachment",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Download config backup",
+                "responses": {
+                    "200": {
+                        "description": "Config backup file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Config not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/raw": {
+            "get": {
+                "description": "GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get or replace raw config text",
+                "parameters": [
+                    {
+                        "enum": [
+                            "yaml",
+                            "json"
+                        ],
+                        "type": "string",
+                        "description": "Format override",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Raw config text",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid format or parse error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (PUT)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "GET returns the raw YAML or JSON config text. PUT replaces it after parsing/validation.",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get or replace raw config text",
+                "parameters": [
+                    {
+                        "enum": [
+                            "yaml",
+                            "json"
+                        ],
+                        "type": "string",
+                        "description": "Format override",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Raw config text",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid format or parse error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (PUT)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Returns ok when the API is running",
@@ -40,6 +425,590 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/logo": {
+            "get": {
+                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get, upload or delete logo",
+                "parameters": [
+                    {
+                        "enum": [
+                            "dark",
+                            "light"
+                        ],
+                        "type": "string",
+                        "description": "Theme variant (GET only)",
+                        "name": "theme",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported image type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get, upload or delete logo",
+                "parameters": [
+                    {
+                        "enum": [
+                            "dark",
+                            "light"
+                        ],
+                        "type": "string",
+                        "description": "Theme variant (GET only)",
+                        "name": "theme",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported image type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "GET serves the logo (custom or theme-aware default). POST uploads a custom logo. DELETE removes it.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get, upload or delete logo",
+                "parameters": [
+                    {
+                        "enum": [
+                            "dark",
+                            "light"
+                        ],
+                        "type": "string",
+                        "description": "Theme variant (GET only)",
+                        "name": "theme",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo image or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid file",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported image type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/probe/{name}/details": {
+            "get": {
+                "description": "Checks if a service is online (status) or returns adapter stats (details)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "probe"
+                ],
+                "summary": "Service probe status / details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.probeResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid path or service name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/probe/{name}/status": {
+            "get": {
+                "description": "Checks if a service is online (status) or returns adapter stats (details)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "probe"
+                ],
+                "summary": "Service probe status / details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name as defined in config",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.probeResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid path or service name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Service not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Manage secrets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret key to delete (DELETE only)",
+                        "name": "key",
+                        "in": "query"
+                    },
+                    {
+                        "description": "{",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Key list or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or missing key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Manage secrets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret key to delete (DELETE only)",
+                        "name": "key",
+                        "in": "query"
+                    },
+                    {
+                        "description": "{",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Key list or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or missing key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "GET returns secret key names. PUT adds/updates a secret. DELETE removes a secret.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Manage secrets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret key to delete (DELETE only)",
+                        "name": "key",
+                        "in": "query"
+                    },
+                    {
+                        "description": "{",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Key list or {\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or missing key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets/backup": {
+            "get": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Downloads the raw secrets.yaml file as an attachment",
+                "produces": [
+                    "application/x-yaml"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Download secrets backup",
+                "responses": {
+                    "200": {
+                        "description": "secrets.yaml",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "No secrets file found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets/import": {
+            "post": {
+                "security": [
+                    {
+                        "HiveToken": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Merges a YAML key-value map into the existing secrets store",
+                "consumes": [
+                    "application/x-yaml"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Import secrets from YAML",
+                "parameters": [
+                    {
+                        "description": "YAML key-value map",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"status\":\"ok\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Read error or Invalid YAML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/system": {
+            "get": {
+                "description": "Returns real-time CPU, RAM and disk usage of the host",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Host system stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.systemInfo"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -65,6 +1034,61 @@ const docTemplate = `{
                             }
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.diskInfo": {
+            "type": "object",
+            "properties": {
+                "percent": {
+                    "type": "number"
+                },
+                "total_gb": {
+                    "type": "number"
+                },
+                "used_gb": {
+                    "type": "number"
+                }
+            }
+        },
+        "main.probeResult": {
+            "type": "object",
+            "properties": {
+                "latency_ms": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.ramInfo": {
+            "type": "object",
+            "properties": {
+                "percent": {
+                    "type": "number"
+                },
+                "total_mb": {
+                    "type": "integer"
+                },
+                "used_mb": {
+                    "type": "integer"
+                }
+            }
+        },
+        "main.systemInfo": {
+            "type": "object",
+            "properties": {
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "disk": {
+                    "$ref": "#/definitions/main.diskInfo"
+                },
+                "ram": {
+                    "$ref": "#/definitions/main.ramInfo"
                 }
             }
         }

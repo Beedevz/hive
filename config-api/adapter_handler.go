@@ -99,7 +99,17 @@ func findService(name, adapterType string) (*serviceItem, error) {
 
 // ─── HTTP handler ─────────────────────────────────────────────────
 
-// handleAdapter handles GET /adapters/{type}?service={name}
+// handleAdapter godoc
+// @Summary     Run adapter for a service
+// @Description Fetches live stats from the named adapter for the given service. Results are cached for 60 s.
+// @Tags        adapters
+// @Param       type    path  string true "Adapter type (e.g. pihole, proxmox, sonarr)"
+// @Param       service query string true "Service name as defined in config"
+// @Produce     json
+// @Success     200 {object} object "AdapterResult with stats array"
+// @Failure     400 {string} string "Missing adapter type or service parameter"
+// @Failure     405 {string} string "Method not allowed"
+// @Router      /adapters/{type} [get]
 func handleAdapter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
