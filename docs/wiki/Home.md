@@ -10,10 +10,10 @@
 | Config format | [[Configuration]] |
 | All adapters | [[Adapters]] |
 | API endpoints | [[API Reference]] |
-| Docker setup | [[Deployment · Docker]] |
-| Kubernetes setup | [[Deployment · Kubernetes]] |
+| Docker setup | [[Deployment·Docker]] |
+| Kubernetes setup | [[Deployment·Kubernetes]] |
 | Secrets & tokens | [[Secrets Management]] |
-| Contributing | [[Development]] |
+| Contributing | [[Contributing]] |
 | Release process | [[Release Process]] |
 
 ## What Hive Does
