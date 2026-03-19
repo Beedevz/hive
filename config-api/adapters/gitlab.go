@@ -56,7 +56,7 @@ func fetchGitLabStats(cfg map[string]interface{}, baseURL string) AdapterResult 
 		var pipes []struct {
 			Status string `json:"status"`
 		}
-		if err := do(fmt.Sprintf("/api/v4/projects/%d/pipelines?per_page=1&order_by=id&sort=desc", p.ID), &pipes); err == nil {
+		if err := do(fmt.Sprintf("/api/v4/projects/%d/pipelines?per_page=1", p.ID), &pipes); err == nil {
 			for _, pi := range pipes {
 				switch pi.Status {
 				case "running", "pending":
