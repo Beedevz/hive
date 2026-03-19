@@ -1954,6 +1954,7 @@ export default function App() {
   const handleSaveCategory = async (form) => {
     const { section, categoryIdx } = editModal
     const newConfig = JSON.parse(JSON.stringify(config))
+    if (!Array.isArray(newConfig[section])) newConfig[section] = []
     const list = newConfig[section]
     if (categoryIdx !== undefined) {
       list[categoryIdx] = { ...list[categoryIdx], category: form.category.trim(), icon: form.icon }
