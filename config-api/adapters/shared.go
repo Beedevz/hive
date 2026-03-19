@@ -85,7 +85,7 @@ func cfgStr(cfg map[string]interface{}, key string) string {
 
 func newHTTPClient(skipTLS bool) *http.Client {
 	return &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipTLS}, //nolint:gosec
 		},
@@ -111,33 +111,52 @@ func doJSON(client *http.Client, req *http.Request, dest interface{}) error {
 	return json.NewDecoder(resp.Body).Decode(dest)
 }
 
-// ─── In-Memory Cache (30s TTL) ────────────────────────────────────
+// ─── In-Memory Cache ──────────────────────────────────────────────
 
 type cacheEntry struct {
 	result AdapterResult
 	at     time.Time
+	ttl    time.Duration
 }
 
 var (
-	adapterCache = make(map[string]cacheEntry)
-	cacheMu      sync.RWMutex
-	cacheTTL     = 60 * time.Second
+	adapterCache  = make(map[string]cacheEntry)
+	cacheMu       sync.RWMutex
+	cacheTTL      = 60 * time.Second
+	cacheErrorTTL = 30 * time.Second // errors cached shorter to allow quicker recovery
 )
 
 func GetCached(key string) (AdapterResult, bool) {
 	cacheMu.RLock()
 	defer cacheMu.RUnlock()
 	e, ok := adapterCache[key]
-	if ok && time.Since(e.at) < cacheTTL {
+	if !ok {
+		return AdapterResult{}, false
+	}
+	ttl := e.ttl
+	if ttl == 0 {
+		ttl = cacheTTL
+	}
+	if time.Since(e.at) < ttl {
 		return e.result, true
 	}
 	return AdapterResult{}, false
 }
 
+// SetCached stores a successful result with the standard 60s TTL.
 func SetCached(key string, r AdapterResult) {
 	cacheMu.Lock()
 	defer cacheMu.Unlock()
-	adapterCache[key] = cacheEntry{result: r, at: time.Now()}
+	adapterCache[key] = cacheEntry{result: r, at: time.Now(), ttl: cacheTTL}
+}
+
+// SetCachedError stores a failed result with a shorter 30s TTL so the adapter
+// retries sooner once the remote service recovers, without hammering it on
+// every request.
+func SetCachedError(key string, r AdapterResult) {
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+	adapterCache[key] = cacheEntry{result: r, at: time.Now(), ttl: cacheErrorTTL}
 }
 
 // ─── Shared format helpers ────────────────────────────────────────

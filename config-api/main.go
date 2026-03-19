@@ -446,6 +446,10 @@ func handleProbeDetails(w http.ResponseWriter, r *http.Request, svc *serviceItem
 	result := adapters.Run(svc.Adapter, cfg, baseURL)
 	if result.Ok {
 		adapters.SetCached(cacheKey, result)
+	} else {
+		// Cache errors too (30s TTL) to avoid hammering unreachable services
+		// on every request while still recovering quickly when they come back.
+		adapters.SetCachedError(cacheKey, result)
 	}
 
 	writeJSON(w, result)

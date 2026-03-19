@@ -45,18 +45,21 @@ func fetchGitLabStats(cfg map[string]interface{}, baseURL string) AdapterResult 
 		stats = append(stats, StatItem{Label: "Open MRs", Value: fmt.Sprintf("%d", len(mrs)), Status: status})
 	}
 
+	// Limit to 20 projects to cap API call count.
 	var projects []struct{ ID int `json:"id"` }
-	_ = do("/api/v4/projects?membership=true&simple=true&per_page=100", &projects)
+	_ = do("/api/v4/projects?membership=true&simple=true&per_page=20", &projects)
 
+	// Fetch only the latest pipeline per project (per_page=1) instead of 20,
+	// reducing worst-case API calls from N*20 to N*1.
 	running, failed := 0, 0
 	for _, p := range projects {
 		var pipes []struct {
 			Status string `json:"status"`
 		}
-		if err := do(fmt.Sprintf("/api/v4/projects/%d/pipelines?per_page=20", p.ID), &pipes); err == nil {
+		if err := do(fmt.Sprintf("/api/v4/projects/%d/pipelines?per_page=1", p.ID), &pipes); err == nil {
 			for _, pi := range pipes {
 				switch pi.Status {
-				case "running":
+				case "running", "pending":
 					running++
 				case "failed":
 					failed++
