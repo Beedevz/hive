@@ -12,7 +12,7 @@ import {
   faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
   faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
   faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
-  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacking,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacked,
   faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
   faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
   faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
@@ -31,7 +31,7 @@ library.add(
   faServer, faDatabase, faNetworkWired, faCloud, faCube, faLayerGroup, faMicrochip,
   faChartLine, faChartBar, faGauge, faBell, faEye, faTriangleExclamation, faCircleCheck,
   faFilm, faMusic, faTv, faPhotoFilm, faHeadphones, faPlay, faVideo,
-  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacking,
+  faDownload, faArrowDown, faFileArrowDown, faMagnet, faBoxesStacked,
   faHardDrive, faFloppyDisk, faBox, faFolder, faFolderOpen, faArchive,
   faShield, faShieldHalved, faLock, faKey, faUserShield, faFingerprint,
   faWifi, faGlobe, faLink, faSatelliteDish, faTowerBroadcast,
@@ -872,6 +872,8 @@ const FA_ICON_LIST = [
   { prefix: 'fas', name: 'star', label: 'star' },
   { prefix: 'fas', name: 'heart', label: 'heart' },
   { prefix: 'fas', name: 'bookmark', label: 'bookmark' },
+  { prefix: 'far', name: 'bookmark', label: 'bookmark (outline)' },
+  { prefix: 'far', name: 'hard-drive', label: 'hard-drive (outline)' },
 ]
 
 function IconPicker({ value, onChange }) {
@@ -965,15 +967,21 @@ function UnifiedIconPicker({ value, onChange }) {
     </button>
   )
 
-  // selfh.st grid
-  const selfhstFiltered = ICON_LIST.filter(i =>
-    i.name.toLowerCase().includes(search.toLowerCase()) ||
-    i.slug.toLowerCase().includes(search.toLowerCase())
-  )
-  // Lucide grid
-  const lucideFiltered = LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
-  // FA grid
-  const faFiltered = FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+  // selfh.st grid — only compute when active
+  const selfhstFiltered = source === 'selfhst'
+    ? ICON_LIST.filter(i =>
+        i.name.toLowerCase().includes(search.toLowerCase()) ||
+        i.slug.toLowerCase().includes(search.toLowerCase())
+      )
+    : []
+  // Lucide grid — only compute when active
+  const lucideFiltered = source === 'lucide'
+    ? LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+    : []
+  // FA grid — only compute when active
+  const faFiltered = source === 'fa'
+    ? FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+    : []
 
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
@@ -996,7 +1004,7 @@ function UnifiedIconPicker({ value, onChange }) {
                   <LucideIcons.Shapes size={18} />Lucide
                 </button>
                 <button type="button" style={btnStyle(false)} onClick={() => { setSource('fa'); setSearch('') }}>
-                  <span style={{ fontSize: 16 }}>󰇠</span>Font Awesome
+                  <FontAwesomeIcon icon={['fas', 'star']} style={{ fontSize: 18 }} />Font Awesome
                 </button>
               </div>
             </>
