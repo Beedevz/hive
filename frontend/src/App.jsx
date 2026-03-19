@@ -2111,7 +2111,7 @@ export default function App() {
         <TokenGate isUnlocked={isUnlocked} onUnlock={handleUnlock} onLock={handleLock} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: isMobile ? '32px 16px 48px' : '48px 24px 64px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: getColumns() >= 3 ? 1600 : getColumns() >= 2 ? 1300 : 900, margin: '0 auto', padding: isMobile ? '32px 16px 48px' : '48px 24px 64px' }}>
 
         {/* Header */}
         <div className={`fade ${visible ? 'show' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, marginBottom: 24 }}>
