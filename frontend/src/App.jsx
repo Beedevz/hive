@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useConfig } from './hooks/useConfig'
 import { useWindowSize } from './hooks/useWindowSize'
 import { useAdapterStats } from './hooks/useAdapterStats'
-import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragOverlay, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import * as LucideIcons from 'lucide-react'
@@ -1840,6 +1840,7 @@ export default function App() {
     return (v >= 1 && v <= 3) ? v : 2
   })
   const [offline, setOffline] = useState(!navigator.onLine)
+  const [dragItem, setDragItem] = useState(null) // { item, type } — for DragOverlay
   useEffect(() => {
     const goOffline = () => setOffline(true)
     const goOnline  = () => setOffline(false)
@@ -2120,6 +2121,22 @@ export default function App() {
     await authSave(newConfig)
   }
 
+  const handleMoveItem = async (section, fromCat, fromItem, toCat, toItem) => {
+    if (fromCat === toCat && fromItem === toItem) return
+    const newConfig = JSON.parse(JSON.stringify(config))
+    if (fromCat === toCat) {
+      newConfig[section][fromCat].items = arrayMove(newConfig[section][fromCat].items, fromItem, toItem)
+    } else {
+      const [item] = newConfig[section][fromCat].items.splice(fromItem, 1)
+      if (toItem === undefined) {
+        newConfig[section][toCat].items.push(item)
+      } else {
+        newConfig[section][toCat].items.splice(toItem, 0, item)
+      }
+    }
+    await authSave(newConfig)
+  }
+
   const toggleCollapse = (key) => {
     setCollapsedCategories(prev => {
       const next = new Set(prev)
@@ -2308,24 +2325,58 @@ export default function App() {
           const emptyLabel = sType === 'services' ? 'No services yet' : 'No bookmarks yet'
           const noMatchLabel = sType === 'services' ? `No services match "${searchQuery}"` : `No bookmarks match "${searchQuery}"`
 
-          const renderItems = (group, origIdx) => sType === 'services'
-            ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {group.items.map((item, ii) => (
-                  <ServiceCard key={ii} item={item} compact={isMobile}
-                    onEdit={isUnlocked ? (it) => setEditModal({ type: 'service', section: sKey, categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
-                    onDelete={isUnlocked ? () => handleDeleteService(sKey, origIdx, ii) : null} />
-                ))}
-              </div>
+          const renderItems = (group, origIdx) => {
+            const itemIds = group.items.map((_, ii) => `item__${origIdx}__${ii}`)
+            return sType === 'services' ? (
+              <SortableContext items={isUnlocked ? itemIds : []} strategy={rectSortingStrategy}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {group.items.map((item, ii) => isUnlocked ? (
+                    <SortableItem key={ii} id={`item__${origIdx}__${ii}`}>
+                      {(dragListeners, dragAttrs) => (
+                        <div style={{ position: 'relative' }}>
+                          <span {...dragListeners} {...dragAttrs}
+                            style={{ position: 'absolute', top: 6, right: 6, zIndex: 5, cursor: 'grab',
+                              color: 'var(--color-text-ghost)', fontSize: 13, padding: '2px 5px',
+                              background: 'var(--color-overlay-md)', borderRadius: 5, lineHeight: 1 }}>
+                            ⠿
+                          </span>
+                          <ServiceCard item={item} compact={isMobile}
+                            onEdit={(it) => setEditModal({ type: 'service', section: sKey, categoryIdx: origIdx, itemIdx: ii, item: it })}
+                            onDelete={() => handleDeleteService(sKey, origIdx, ii)} />
+                        </div>
+                      )}
+                    </SortableItem>
+                  ) : (
+                    <ServiceCard key={ii} item={item} compact={isMobile} />
+                  ))}
+                </div>
+              </SortableContext>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-                {group.items.map((item, ii) => (
-                  <BookmarkCard key={ii} item={item}
-                    onEdit={isUnlocked ? (it) => setEditModal({ type: 'bookmark', section: sKey, categoryIdx: origIdx, itemIdx: ii, item: it }) : null}
-                    onDelete={isUnlocked ? () => handleDeleteBookmark(sKey, origIdx, ii) : null} />
-                ))}
-              </div>
+              <SortableContext items={isUnlocked ? itemIds : []} strategy={rectSortingStrategy}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                  {group.items.map((item, ii) => isUnlocked ? (
+                    <SortableItem key={ii} id={`item__${origIdx}__${ii}`}>
+                      {(dragListeners, dragAttrs) => (
+                        <div style={{ position: 'relative' }}>
+                          <span {...dragListeners} {...dragAttrs}
+                            style={{ position: 'absolute', top: 4, right: 4, zIndex: 5, cursor: 'grab',
+                              color: 'var(--color-text-ghost)', fontSize: 13, padding: '2px 5px',
+                              background: 'var(--color-overlay-md)', borderRadius: 5, lineHeight: 1 }}>
+                            ⠿
+                          </span>
+                          <BookmarkCard item={item}
+                            onEdit={(it) => setEditModal({ type: 'bookmark', section: sKey, categoryIdx: origIdx, itemIdx: ii, item: it })}
+                            onDelete={() => handleDeleteBookmark(sKey, origIdx, ii)} />
+                        </div>
+                      )}
+                    </SortableItem>
+                  ) : (
+                    <BookmarkCard key={ii} item={item} />
+                  ))}
+                </div>
+              </SortableContext>
             )
+          }
 
           const wrapperStyle = sType === 'services'
             ? { display: 'grid', gridTemplateColumns: `repeat(${getColumns()}, 1fr)`, gap: isMobile ? 16 : 28 }
@@ -2359,7 +2410,33 @@ export default function App() {
                   )
                 ) : (
                   <DndContext sensors={sensors} collisionDetection={closestCenter}
-                    onDragEnd={({ active, over }) => over && handleReorder(sKey, active.id, over.id)}>
+                    onDragStart={({ active }) => {
+                      const aid = String(active.id)
+                      if (aid.startsWith('item__')) {
+                        const [, catIdx, itemIdx] = aid.split('__')
+                        const it = sData[parseInt(catIdx)]?.items[parseInt(itemIdx)]
+                        setDragItem({ item: it, type: sType })
+                      }
+                    }}
+                    onDragEnd={({ active, over }) => {
+                      setDragItem(null)
+                      if (!over) return
+                      const aid = String(active.id)
+                      const oid = String(over.id)
+                      if (aid.startsWith('item__')) {
+                        const [, fromCat, fromItem] = aid.split('__')
+                        if (oid.startsWith('item__')) {
+                          const [, toCat, toItem] = oid.split('__')
+                          handleMoveItem(sKey, parseInt(fromCat), parseInt(fromItem), parseInt(toCat), parseInt(toItem))
+                        } else {
+                          // Dropped on category header → move to end of that category
+                          const toCat = parseInt(oid.replace(`${sKey}-`, ''))
+                          handleMoveItem(sKey, parseInt(fromCat), parseInt(fromItem), toCat, undefined)
+                        }
+                      } else {
+                        handleReorder(sKey, active.id, over.id)
+                      }
+                    }}>
                     <SortableContext items={sData.map((_, i) => `${sKey}-${i}`)} strategy={rectSortingStrategy}>
                       <div style={wrapperStyle}>
                         {sData.map((group, origIdx) => {
@@ -2397,6 +2474,15 @@ export default function App() {
                         })}
                       </div>
                     </SortableContext>
+                    <DragOverlay>
+                      {dragItem && (
+                        <div style={{ opacity: 0.9, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', borderRadius: 10, pointerEvents: 'none' }}>
+                          {dragItem.type === 'services'
+                            ? <ServiceCard item={dragItem.item} compact={isMobile} />
+                            : <BookmarkCard item={dragItem.item} />}
+                        </div>
+                      )}
+                    </DragOverlay>
                   </DndContext>
                 )
               ) : (
