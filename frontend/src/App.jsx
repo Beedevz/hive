@@ -105,6 +105,14 @@ const LUCIDE_ICON_LIST = [
   'Play','Pause','RefreshCw','Power','Zap','Sun','Moon','Thermometer',
 ]
 
+// Full Lucide list derived from the already-imported package — zero extra cost
+const LUCIDE_FULL_LIST = Object.keys(LucideIcons).filter(
+  k => /^[A-Z]/.test(k) && !k.endsWith('Icon') && k !== 'createLucideIcon'
+)
+
+// Module-level cache for FA full list (lazy-loaded once per session)
+let _faFullList = null
+
 // ─── Lucide Icon Picker ───────────────────────────────────────────
 function LucideIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
@@ -945,6 +953,7 @@ function UnifiedIconPicker({ value, onChange }) {
   const [source, setSource] = useState(null) // null | 'selfhst' | 'lucide' | 'fa'
   const [search, setSearch] = useState('')
   const [fullList, setFullList] = useState(_selfhstFullList)
+  const [faFullList, setFaFullList] = useState(_faFullList)
   const ref = useRef(null)
 
   // Close on click-outside or Escape
@@ -978,6 +987,22 @@ function UnifiedIconPicker({ value, onChange }) {
         setFullList(list)
       })
       .catch(() => {}) // silently fall back to ICON_LIST
+  }, [source])
+
+  // Lazy-load full FA solid icon list when FA tab is opened
+  useEffect(() => {
+    if (source !== 'fa' || _faFullList) {
+      if (_faFullList) setFaFullList(_faFullList)
+      return
+    }
+    import('@fortawesome/free-solid-svg-icons').then(({ fas }) => {
+      library.add(fas)
+      const list = Object.values(fas)
+        .filter(v => v && v.iconName && v.prefix === 'fas')
+        .map(v => ({ prefix: 'fas', name: v.iconName, label: v.iconName }))
+      _faFullList = list
+      setFaFullList(list)
+    }).catch(() => {})
   }, [source])
 
   const handleOpen = () => { setOpen(o => !o); setSource(null); setSearch('') }
@@ -1017,13 +1042,13 @@ function UnifiedIconPicker({ value, onChange }) {
         i.slug.toLowerCase().includes(search.toLowerCase())
       )
     : []
-  // Lucide grid — only compute when active
+  // Lucide grid — popular list by default, full package list when searching
   const lucideFiltered = source === 'lucide'
-    ? LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+    ? (search ? LUCIDE_FULL_LIST : LUCIDE_ICON_LIST).filter(n => n.toLowerCase().includes(search.toLowerCase()))
     : []
-  // FA grid — only compute when active
+  // FA grid — curated list by default, full lazy-loaded list when searching
   const faFiltered = source === 'fa'
-    ? FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+    ? (search ? (faFullList || FA_ICON_LIST) : FA_ICON_LIST).filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
     : []
 
   return (
