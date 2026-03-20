@@ -769,10 +769,24 @@ const ICON_LIST = [
   // Monitoring & Uptime
   ['adguard-home','AdGuard'],['pi-hole','Pi-hole'],['grafana','Grafana'],['netdata','Netdata'],
   ['uptime-kuma','Uptime Kuma'],['prometheus','Prometheus'],['alertmanager','Alertmanager'],
+  ['zabbix','Zabbix'],['influxdb','InfluxDB'],['loki','Loki'],['graylog','Graylog'],
+  // Elastic Stack
+  ['elasticsearch','Elasticsearch'],['kibana','Kibana'],['logstash','Logstash'],
+  ['elastic','Elastic'],['opensearch','OpenSearch'],
   // Infrastructure
   ['proxmox','Proxmox'],['portainer','Portainer'],['traefik','Traefik'],
   ['nginx-proxy-manager','NPM'],['nginx','NGINX'],['caddy','Caddy'],
   ['docker','Docker'],['kubernetes','Kubernetes'],['ansible','Ansible'],['terraform','Terraform'],
+  ['rancher','Rancher'],['rancher-k3s','k3s'],['rancher-longhorn','Longhorn'],['harbor','Harbor'],
+  ['hashicorp-vault','Vault'],['hashicorp-consul','Consul'],
+  // Databases
+  ['postgresql','PostgreSQL'],['mysql','MySQL'],['mariadb','MariaDB'],['mongodb','MongoDB'],
+  ['redis','Redis'],['rabbitmq','RabbitMQ'],['apache-kafka','Kafka'],
+  // Auth & Identity
+  ['keycloak','Keycloak'],['authentik','Authentik'],['authelia','Authelia'],
+  ['zitadel','Zitadel'],['openldap','OpenLDAP'],['lldap','lldap'],
+  // Security
+  ['wazuh','Wazuh'],['crowdsec','CrowdSec'],
   // Media
   ['jellyfin','Jellyfin'],['plex','Plex'],['emby','Emby'],['kodi','Kodi'],
   ['sonarr','Sonarr'],['radarr','Radarr'],['lidarr','Lidarr'],['readarr','Readarr'],
@@ -785,8 +799,10 @@ const ICON_LIST = [
   ['home-assistant','Home Assistant'],['homebridge','Homebridge'],
   ['paperless-ngx','Paperless'],['firefly-iii','Firefly III'],
   ['freshrss','FreshRSS'],['miniflux','Miniflux'],['wallabag','Wallabag'],
+  ['mattermost','Mattermost'],['matrix','Matrix'],
   // Storage & NAS
   ['truenas','TrueNAS'],['synology','Synology'],['western-digital','WD'],['minio','MinIO'],
+  ['openmediavault','OMV'],
   // Dev & Tools
   ['gitlab','GitLab'],['gitea','Gitea'],['forgejo','Forgejo'],['github','GitHub'],
   ['jenkins','Jenkins'],['drone','Drone'],
