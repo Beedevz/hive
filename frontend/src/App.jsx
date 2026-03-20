@@ -105,6 +105,14 @@ const LUCIDE_ICON_LIST = [
   'Play','Pause','RefreshCw','Power','Zap','Sun','Moon','Thermometer',
 ]
 
+// Full Lucide list derived from the already-imported package — zero extra cost
+const LUCIDE_FULL_LIST = Object.keys(LucideIcons).filter(
+  k => /^[A-Z]/.test(k) && !k.endsWith('Icon') && k !== 'createLucideIcon'
+)
+
+// Module-level cache for FA full list (lazy-loaded once per session)
+let _faFullList = null
+
 // ─── Lucide Icon Picker ───────────────────────────────────────────
 function LucideIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
@@ -769,10 +777,24 @@ const ICON_LIST = [
   // Monitoring & Uptime
   ['adguard-home','AdGuard'],['pi-hole','Pi-hole'],['grafana','Grafana'],['netdata','Netdata'],
   ['uptime-kuma','Uptime Kuma'],['prometheus','Prometheus'],['alertmanager','Alertmanager'],
+  ['zabbix','Zabbix'],['influxdb','InfluxDB'],['loki','Loki'],['graylog','Graylog'],
+  // Elastic Stack
+  ['elasticsearch','Elasticsearch'],['kibana','Kibana'],['logstash','Logstash'],
+  ['elastic','Elastic'],['opensearch','OpenSearch'],
   // Infrastructure
   ['proxmox','Proxmox'],['portainer','Portainer'],['traefik','Traefik'],
   ['nginx-proxy-manager','NPM'],['nginx','NGINX'],['caddy','Caddy'],
   ['docker','Docker'],['kubernetes','Kubernetes'],['ansible','Ansible'],['terraform','Terraform'],
+  ['rancher','Rancher'],['rancher-k3s','k3s'],['rancher-longhorn','Longhorn'],['harbor','Harbor'],
+  ['hashicorp-vault','Vault'],['hashicorp-consul','Consul'],
+  // Databases
+  ['postgresql','PostgreSQL'],['mysql','MySQL'],['mariadb','MariaDB'],['mongodb','MongoDB'],
+  ['redis','Redis'],['rabbitmq','RabbitMQ'],['apache-kafka','Kafka'],
+  // Auth & Identity
+  ['keycloak','Keycloak'],['authentik','Authentik'],['authelia','Authelia'],
+  ['zitadel','Zitadel'],['openldap','OpenLDAP'],['lldap','lldap'],
+  // Security
+  ['wazuh','Wazuh'],['crowdsec','CrowdSec'],
   // Media
   ['jellyfin','Jellyfin'],['plex','Plex'],['emby','Emby'],['kodi','Kodi'],
   ['sonarr','Sonarr'],['radarr','Radarr'],['lidarr','Lidarr'],['readarr','Readarr'],
@@ -785,8 +807,10 @@ const ICON_LIST = [
   ['home-assistant','Home Assistant'],['homebridge','Homebridge'],
   ['paperless-ngx','Paperless'],['firefly-iii','Firefly III'],
   ['freshrss','FreshRSS'],['miniflux','Miniflux'],['wallabag','Wallabag'],
+  ['mattermost','Mattermost'],['matrix','Matrix'],
   // Storage & NAS
   ['truenas','TrueNAS'],['synology','Synology'],['western-digital','WD'],['minio','MinIO'],
+  ['openmediavault','OMV'],
   // Dev & Tools
   ['gitlab','GitLab'],['gitea','Gitea'],['forgejo','Forgejo'],['github','GitHub'],
   ['jenkins','Jenkins'],['drone','Drone'],
@@ -797,6 +821,9 @@ const ICON_LIST = [
   ['glances','Glances'],['scrutiny','Scrutiny'],['frigate','Frigate'],['watchtower','Watchtower'],
   ['speedtest-tracker','Speedtest'],
 ].map(([slug, name]) => ({ slug, name, url: SI + slug + '.svg' }))
+
+// Module-level cache — fetched once per session from GitHub API
+let _selfhstFullList = null
 
 // ─── Font Awesome curated icon list (~63 icons, all named in spec) ───────────
 const FA_ICON_LIST = [
@@ -925,6 +952,8 @@ function UnifiedIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const [source, setSource] = useState(null) // null | 'selfhst' | 'lucide' | 'fa'
   const [search, setSearch] = useState('')
+  const [fullList, setFullList] = useState(_selfhstFullList)
+  const [faFullList, setFaFullList] = useState(_faFullList)
   const ref = useRef(null)
 
   // Close on click-outside or Escape
@@ -936,6 +965,45 @@ function UnifiedIconPicker({ value, onChange }) {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onMouse); document.removeEventListener('keydown', onKey) }
   }, [open])
+
+  // Fetch full selfh.st icon list once per session when selfhst tab is opened
+  useEffect(() => {
+    if (source !== 'selfhst' || _selfhstFullList) {
+      if (_selfhstFullList) setFullList(_selfhstFullList)
+      return
+    }
+    fetch('https://api.github.com/repos/selfhst/icons/git/trees/main?recursive=1')
+      .then(r => r.json())
+      .then(data => {
+        const list = (data.tree || [])
+          .filter(t => t.path.startsWith('svg/') && t.path.endsWith('.svg')
+            && !t.path.endsWith('-dark.svg') && !t.path.endsWith('-light.svg'))
+          .map(t => {
+            const slug = t.path.replace('svg/', '').replace('.svg', '')
+            const name = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            return { slug, name, url: SI + slug + '.svg' }
+          })
+        _selfhstFullList = list
+        setFullList(list)
+      })
+      .catch(() => {}) // silently fall back to ICON_LIST
+  }, [source])
+
+  // Lazy-load full FA solid icon list when FA tab is opened
+  useEffect(() => {
+    if (source !== 'fa' || _faFullList) {
+      if (_faFullList) setFaFullList(_faFullList)
+      return
+    }
+    import('@fortawesome/free-solid-svg-icons').then(({ fas }) => {
+      library.add(fas)
+      const list = Object.values(fas)
+        .filter(v => v && v.iconName && v.prefix === 'fas')
+        .map(v => ({ prefix: 'fas', name: v.iconName, label: v.iconName }))
+      _faFullList = list
+      setFaFullList(list)
+    }).catch(() => {})
+  }, [source])
 
   const handleOpen = () => { setOpen(o => !o); setSource(null); setSearch('') }
   const handleBack = () => { setSource(null); setSearch('') }
@@ -967,20 +1035,20 @@ function UnifiedIconPicker({ value, onChange }) {
     </button>
   )
 
-  // selfh.st grid — only compute when active
+  // selfh.st grid — popular list by default, full list when searching
   const selfhstFiltered = source === 'selfhst'
-    ? ICON_LIST.filter(i =>
+    ? (search ? (fullList || ICON_LIST) : ICON_LIST).filter(i =>
         i.name.toLowerCase().includes(search.toLowerCase()) ||
         i.slug.toLowerCase().includes(search.toLowerCase())
       )
     : []
-  // Lucide grid — only compute when active
+  // Lucide grid — popular list by default, full package list when searching
   const lucideFiltered = source === 'lucide'
-    ? LUCIDE_ICON_LIST.filter(n => n.toLowerCase().includes(search.toLowerCase()))
+    ? (search ? LUCIDE_FULL_LIST : LUCIDE_ICON_LIST).filter(n => n.toLowerCase().includes(search.toLowerCase()))
     : []
-  // FA grid — only compute when active
+  // FA grid — curated list by default, full lazy-loaded list when searching
   const faFiltered = source === 'fa'
-    ? FA_ICON_LIST.filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
+    ? (search ? (faFullList || FA_ICON_LIST) : FA_ICON_LIST).filter(i => i.label.toLowerCase().includes(search.toLowerCase()))
     : []
 
   return (
