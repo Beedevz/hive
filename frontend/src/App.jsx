@@ -814,6 +814,9 @@ const ICON_LIST = [
   ['speedtest-tracker','Speedtest'],
 ].map(([slug, name]) => ({ slug, name, url: SI + slug + '.svg' }))
 
+// Module-level cache — fetched once per session from GitHub API
+let _selfhstFullList = null
+
 // ─── Font Awesome curated icon list (~63 icons, all named in spec) ───────────
 const FA_ICON_LIST = [
   // Infrastructure
@@ -941,6 +944,7 @@ function UnifiedIconPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const [source, setSource] = useState(null) // null | 'selfhst' | 'lucide' | 'fa'
   const [search, setSearch] = useState('')
+  const [fullList, setFullList] = useState(_selfhstFullList)
   const ref = useRef(null)
 
   // Close on click-outside or Escape
@@ -952,6 +956,29 @@ function UnifiedIconPicker({ value, onChange }) {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onMouse); document.removeEventListener('keydown', onKey) }
   }, [open])
+
+  // Fetch full selfh.st icon list once per session when selfhst tab is opened
+  useEffect(() => {
+    if (source !== 'selfhst' || _selfhstFullList) {
+      if (_selfhstFullList) setFullList(_selfhstFullList)
+      return
+    }
+    fetch('https://api.github.com/repos/selfhst/icons/git/trees/main?recursive=1')
+      .then(r => r.json())
+      .then(data => {
+        const list = (data.tree || [])
+          .filter(t => t.path.startsWith('svg/') && t.path.endsWith('.svg')
+            && !t.path.endsWith('-dark.svg') && !t.path.endsWith('-light.svg'))
+          .map(t => {
+            const slug = t.path.replace('svg/', '').replace('.svg', '')
+            const name = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            return { slug, name, url: SI + slug + '.svg' }
+          })
+        _selfhstFullList = list
+        setFullList(list)
+      })
+      .catch(() => {}) // silently fall back to ICON_LIST
+  }, [source])
 
   const handleOpen = () => { setOpen(o => !o); setSource(null); setSearch('') }
   const handleBack = () => { setSource(null); setSearch('') }
@@ -983,9 +1010,9 @@ function UnifiedIconPicker({ value, onChange }) {
     </button>
   )
 
-  // selfh.st grid — only compute when active
+  // selfh.st grid — popular list by default, full list when searching
   const selfhstFiltered = source === 'selfhst'
-    ? ICON_LIST.filter(i =>
+    ? (search ? (fullList || ICON_LIST) : ICON_LIST).filter(i =>
         i.name.toLowerCase().includes(search.toLowerCase()) ||
         i.slug.toLowerCase().includes(search.toLowerCase())
       )
